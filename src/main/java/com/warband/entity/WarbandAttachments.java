@@ -23,6 +23,15 @@ public final class WarbandAttachments {
             builder -> builder.persistent(MobData.CODEC)
     );
 
+    /**
+     * On a player: the game-time tick until which post-death difficulty relief
+     * applies. Absent when no relief is active. Not persistent — relief lapsing
+     * on logout is acceptable.
+     */
+    public static final AttachmentType<Long> DEATH_RELIEF = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "death_relief")
+    );
+
     private WarbandAttachments() {
     }
 

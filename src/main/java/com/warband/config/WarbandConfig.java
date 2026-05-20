@@ -19,13 +19,21 @@ import java.util.Properties;
 public final class WarbandConfig {
 
     // ── Difficulty ──────────────────────────────────────────────────────────
-    public static DifficultyMode difficultyMode = DifficultyMode.DISTANCE;
+    public static DifficultyMode difficultyMode = DifficultyMode.SCORE;
     /** Blocks from world spawn that stay fully vanilla (difficulty 0). */
     public static int safeRadius = 256;
     /** Distance from spawn at which difficulty caps (DISTANCE mode). */
     public static int maxDifficultyRadius = 4096;
     /** World day count at which difficulty caps (TIME mode). */
     public static int maxDifficultyDays = 30;
+    /** If true, Peaceful disables Warband and Easy/Normal lower its ceiling. */
+    public static boolean respectGlobalDifficulty = true;
+    /** If true, vanilla regional difficulty feeds COMBINED as an extra term. */
+    public static boolean factorVanillaDifficulty = false;
+    /** Seconds of eased difficulty after a player death. 0 disables relief. */
+    public static int deathReliefSeconds = 600;
+    /** How much relief eases difficulty: 0.0 none .. 1.0 full calm. */
+    public static double deathReliefStrength = 0.5;
 
     // ── Squads & spawning ───────────────────────────────────────────────────
     public static boolean squadsEnabled = true;
@@ -52,6 +60,10 @@ public final class WarbandConfig {
         safeRadius = parseInt(props, "safeRadius", safeRadius, 0, 100_000, logger);
         maxDifficultyRadius = parseInt(props, "maxDifficultyRadius", maxDifficultyRadius, 1, 1_000_000, logger);
         maxDifficultyDays = parseInt(props, "maxDifficultyDays", maxDifficultyDays, 1, 100_000, logger);
+        respectGlobalDifficulty = parseBoolean(props, "respectGlobalDifficulty", respectGlobalDifficulty, logger);
+        factorVanillaDifficulty = parseBoolean(props, "factorVanillaDifficulty", factorVanillaDifficulty, logger);
+        deathReliefSeconds = parseInt(props, "deathReliefSeconds", deathReliefSeconds, 0, 100_000, logger);
+        deathReliefStrength = parseDouble(props, "deathReliefStrength", deathReliefStrength, 0.0, 1.0, logger);
 
         squadsEnabled = parseBoolean(props, "squadsEnabled", squadsEnabled, logger);
         maxSquadSize = parseInt(props, "maxSquadSize", maxSquadSize, 1, 64, logger);
@@ -84,6 +96,14 @@ public final class WarbandConfig {
                 maxDifficultyRadius=%d
                 # World day count at which difficulty caps (TIME mode).
                 maxDifficultyDays=%d
+                # Peaceful disables Warband; Easy/Normal lower its difficulty ceiling.
+                respectGlobalDifficulty=%s
+                # Fold vanilla regional difficulty into COMBINED mode as an extra term.
+                factorVanillaDifficulty=%s
+                # Seconds of eased difficulty after a player death (0 disables).
+                deathReliefSeconds=%d
+                # How much a death eases difficulty: 0.0 none .. 1.0 full calm.
+                deathReliefStrength=%s
 
                 # ── Squads & spawning ─────────────────────────────────────────────
                 # If true, mobs may spawn as role-based squads at higher difficulty.
@@ -97,6 +117,10 @@ public final class WarbandConfig {
                     safeRadius,
                     maxDifficultyRadius,
                     maxDifficultyDays,
+                    respectGlobalDifficulty,
+                    factorVanillaDifficulty,
+                    deathReliefSeconds,
+                    deathReliefStrength,
                     squadsEnabled,
                     maxSquadSize,
                     maxSmartMobsPerPlayer
@@ -111,6 +135,22 @@ public final class WarbandConfig {
         if (s.equals("false")) return false;
         logger.warn("[Warband] '{}' is not a valid boolean ('{}'), using default {}", key, raw, def);
         return def;
+    }
+
+    private static double parseDouble(Properties props, String key, double def, double min, double max, Logger logger) {
+        String raw = props.getProperty(key);
+        if (raw == null) return def;
+        try {
+            double val = Double.parseDouble(raw.trim());
+            if (val < min || val > max) {
+                logger.warn("[Warband] '{}' value {} out of range [{}, {}], clamping", key, val, min, max);
+                return Math.max(min, Math.min(max, val));
+            }
+            return val;
+        } catch (NumberFormatException e) {
+            logger.warn("[Warband] '{}' is not a valid number ('{}'), using default {}", key, raw, def);
+            return def;
+        }
     }
 
     private static int parseInt(Properties props, String key, int def, int min, int max, Logger logger) {

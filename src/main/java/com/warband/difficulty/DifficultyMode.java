@@ -12,7 +12,7 @@ public enum DifficultyMode {
     /** Difficulty rises as the world ages (day count). */
     TIME,
 
-    /** Difficulty rises with a per-player score (playtime, kills, or a scoreboard). */
+    /** Difficulty rises with a per-player capability score — see {@link PlayerScore}. */
     SCORE,
 
     /** Combination — the highest of the enabled modes wins. */

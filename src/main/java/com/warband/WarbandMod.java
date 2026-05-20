@@ -1,6 +1,8 @@
 package com.warband;
 
+import com.warband.command.WarbandCommand;
 import com.warband.config.WarbandConfig;
+import com.warband.difficulty.PlayerScore;
 import com.warband.entity.WarbandAttachments;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
@@ -25,9 +27,10 @@ public final class WarbandMod implements ModInitializer {
     public void onInitialize() {
         WarbandConfig.load(LOGGER);
         WarbandAttachments.init();
+        PlayerScore.register();
+        WarbandCommand.register();
 
-        // TODO: register the difficulty tick, spawn director, squad coordinator,
-        //       and the /warband command here.
+        // TODO: register the spawn director and squad coordinator here.
 
         LOGGER.info("[Warband] initialized");
     }
