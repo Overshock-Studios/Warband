@@ -6,17 +6,11 @@ package com.warband.difficulty;
  */
 public enum DifficultyMode {
 
-    /** Difficulty rises with distance from world spawn. The default. */
+    /** Difficulty rises with distance from world spawn. */
     DISTANCE,
 
-    /** Difficulty rises as the world ages (day count). */
-    TIME,
-
-    /** Difficulty rises with a per-player capability score — see {@link PlayerScore}. */
-    SCORE,
-
-    /** Combination — the highest of the enabled modes wins. */
-    COMBINED;
+    /** Difficulty follows a running average of player capability sampled into chunks. */
+    REGIONAL;
 
     public static DifficultyMode fromString(String raw, DifficultyMode fallback) {
         if (raw == null) return fallback;

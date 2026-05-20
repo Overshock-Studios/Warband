@@ -35,7 +35,7 @@ public final class WitchSupportGoal extends SquadGoal {
         } else {
             best.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 100, 0, false, true));
         }
-        TacticalEffects.signal((ServerLevel) mob.level(), best.position());
+        TacticalEffects.signal((ServerLevel) mob.level(), mob);
         return true;
     }
 }

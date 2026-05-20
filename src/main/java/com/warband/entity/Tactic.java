@@ -37,7 +37,9 @@ public enum Tactic {
     SLIME_SURGE(1 << 12),
     HOGLIN_STAMPEDE(1 << 13),
     ILLAGER_COMMAND(1 << 14),
-    PHANTOM_HARASS(1 << 15);
+    PHANTOM_HARASS(1 << 15),
+    LEAP_UNREACHABLE(1 << 16),
+    MOB_STACK_CLIMB(1 << 17);
 
     private final int bit;
 
@@ -72,6 +74,9 @@ public enum Tactic {
         if ((mob instanceof Zombie || mob instanceof Drowned || mob instanceof ZombifiedPiglin) && difficulty >= 0.70) {
             mask |= WATER_COMMIT.bit;
         }
+        if ((mob instanceof Zombie || mob instanceof Drowned || mob instanceof ZombifiedPiglin) && difficulty >= 0.80) {
+            mask |= LEAP_UNREACHABLE.bit;
+        }
         if (mob instanceof Creeper && difficulty >= 0.55) {
             mask |= PRESSURE_UNREACHABLE.bit | CREEPER_STALK.bit;
         }
@@ -95,9 +100,11 @@ public enum Tactic {
         }
         if ((mob instanceof Hoglin || mob instanceof Zoglin) && difficulty >= 0.45) {
             mask |= HOGLIN_STAMPEDE.bit;
+            if (difficulty >= 0.65) mask |= LEAP_UNREACHABLE.bit | MOB_STACK_CLIMB.bit;
         }
         if (IllagerInvasionCompat.isIllagerLike(mob) && difficulty >= 0.45) {
             mask |= ILLAGER_COMMAND.bit | PRESSURE_UNREACHABLE.bit;
+            if (difficulty >= 0.70) mask |= LEAP_UNREACHABLE.bit | MOB_STACK_CLIMB.bit;
         }
         if (mob instanceof Phantom && difficulty >= 0.45) {
             mask |= PHANTOM_HARASS.bit | PRESSURE_UNREACHABLE.bit;

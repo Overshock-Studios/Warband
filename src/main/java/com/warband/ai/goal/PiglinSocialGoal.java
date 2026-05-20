@@ -24,14 +24,14 @@ public final class PiglinSocialGoal extends SquadGoal {
             boolean moving = moveTo(regroup);
             if (moving) {
                 mob.addEffect(new MobEffectInstance(MobEffects.SPEED, 80, 0, false, true));
-                TacticalEffects.signal((ServerLevel) mob.level(), mob.position());
+                TacticalEffects.signal((ServerLevel) mob.level(), mob);
             }
             return moving;
         }
 
         if (squad.members().size() >= 3 && visibleTarget() != null) {
             mob.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 80, 0, false, true));
-            TacticalEffects.signal((ServerLevel) mob.level(), mob.position());
+            TacticalEffects.signal((ServerLevel) mob.level(), mob);
             return true;
         }
         return false;

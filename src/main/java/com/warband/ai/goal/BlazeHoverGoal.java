@@ -28,7 +28,7 @@ public final class BlazeHoverGoal extends SquadGoal {
                 mob.getRandom().nextInt(9) - 4);
         boolean moving = moveTo(hover);
         if (moving) {
-            TacticalEffects.signal((ServerLevel) mob.level(), mob.position());
+            TacticalEffects.signal((ServerLevel) mob.level(), mob);
         }
         return moving;
     }

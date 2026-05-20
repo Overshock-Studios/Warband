@@ -9,6 +9,8 @@ import com.warband.ai.goal.FlankGoal;
 import com.warband.ai.goal.FrostWalkerGoal;
 import com.warband.ai.goal.HoglinStampedeGoal;
 import com.warband.ai.goal.IllagerCommandGoal;
+import com.warband.ai.goal.IllagerDoctrineGoal;
+import com.warband.ai.goal.IllagerRaidAssaultGoal;
 import com.warband.ai.goal.InvestigateLastKnownGoal;
 import com.warband.ai.goal.KiteGoal;
 import com.warband.ai.goal.PhantomHarassGoal;
@@ -26,6 +28,7 @@ import com.warband.ai.goal.WarbandGoal;
 import com.warband.ai.goal.WitchSupportGoal;
 import com.warband.ai.goal.ZombieHordeGoal;
 import com.warband.compat.IllagerInvasionCompat;
+import com.warband.compat.RaidCompat;
 import com.warband.config.WarbandConfig;
 import com.warband.entity.MobData;
 import com.warband.entity.Role;
@@ -76,6 +79,8 @@ public final class SquadCoordinator {
     private static final double JOIN_RADIUS = 18.0;
     private static final double BACKUP_RADIUS = 32.0;
     private static final double SMART_SCAN_RADIUS = 96.0;
+    /** Below this difficulty a mob fights to the death — only smarter mobs retreat. */
+    private static final double RETREAT_MIN_DIFFICULTY = 0.5;
     private static int nextSquadId = 1;
     private static boolean spawningSquadmate;
 
@@ -102,10 +107,17 @@ public final class SquadCoordinator {
      * warrants it and the local smart-mob cap allows it.
      */
     public static boolean assignNaturalSpawn(Mob mob, double difficulty) {
+        return assignNaturalSpawn(mob, difficulty, true);
+    }
+
+    public static boolean assignNaturalSpawn(Mob mob, double difficulty, boolean spawnFormation) {
         if (!WarbandConfig.squadsEnabled || difficulty < 0.25 || !underSmartCap((ServerLevel) mob.level(), mob)) {
             return false;
         }
         if (!isSmartEligible(mob)) {
+            return false;
+        }
+        if (mob.getRandom().nextFloat() > squadChance(difficulty)) {
             return false;
         }
 
@@ -130,7 +142,7 @@ public final class SquadCoordinator {
 
         Role role = chooseRole(mob, squad.members().size(), difficulty);
         addMob(squad, mob, role, difficulty);
-        if (newSquad) {
+        if (newSquad && spawnFormation) {
             spawnNaturalSquadmates(squad, mob, difficulty);
         }
         return true;
@@ -163,8 +175,48 @@ public final class SquadCoordinator {
         return squad;
     }
 
+    public static Squad createSquad(ServerLevel level, List<Mob> mobs, double difficulty) {
+        Squad squad = new Squad(nextSquadId++, level);
+        SQUADS.put(squad.id(), squad);
+
+        for (int i = 0; i < mobs.size(); i++) {
+            Mob mob = mobs.get(i);
+            if (mob == null || !mob.isAlive()) continue;
+            Role role = i == 0 && difficulty >= 0.45 ? Role.LEADER : chooseRole(mob, i, difficulty);
+            addMob(squad, mob, role, difficulty);
+        }
+        return squad;
+    }
+
+    /**
+     * Make a mob the commander of a squad: guarantees squad membership, the
+     * {@code ILLAGER_COMMAND} tactic and its goal kit, and a kite goal so the
+     * commander fights from behind the line. This is what makes a Warmarshal the
+     * <i>smartest</i> illager in its garrison, not merely the strongest.
+     */
+    public static void makeCommander(Mob mob, double difficulty) {
+        if (!WarbandConfig.squadsEnabled || !(mob.level() instanceof ServerLevel level)) return;
+
+        Squad squad = SQUADS.get(MobData.get(mob).squadId());
+        if (squad == null || squad.isEmpty()) {
+            squad = nearestJoinableSquad(level, mob.blockPosition(), mob);
+        }
+        if (squad == null) {
+            squad = new Squad(nextSquadId++, level);
+            SQUADS.put(squad.id(), squad);
+        }
+
+        int tactics = MobData.get(mob).tactics() | Tactic.ILLAGER_COMMAND.bit();
+        MobData.set(mob, new MobData((float) difficulty, Role.LEADER, squad.id(), tactics));
+        addGoals(mob, squad, Role.LEADER);
+        // A commander directs from behind the line — kite, never facetank.
+        ((MobGoalSelectorAccessor) mob).warband$goalSelector().addGoal(2, new KiteGoal(mob, squad));
+        squad.add(mob);
+    }
+
     public static boolean callBackup(Squad squad, BlockPos near) {
-        if (squad.members().size() >= WarbandConfig.maxSquadSize) return false;
+        int cap = effectiveMaxSquadSize(squad.level(), near);
+        if (squad.members().size() >= cap) return false;
 
         AABB box = AABB.ofSize(near.getCenter(), BACKUP_RADIUS * 2.0, BACKUP_RADIUS, BACKUP_RADIUS * 2.0);
         List<Mob> candidates = squad.level().getEntitiesOfClass(Mob.class, box, mob -> {
@@ -175,7 +227,7 @@ public final class SquadCoordinator {
         });
 
         int joined = 0;
-        int max = Math.min(1, WarbandConfig.maxSquadSize - squad.members().size());
+        int max = Math.min(1, cap - squad.members().size());
         double difficulty = squad.members().isEmpty() ? 0.5 : MobData.get(squad.members().getFirst()).difficulty();
         for (Mob mob : candidates) {
             if (joined >= max) break;
@@ -190,6 +242,25 @@ public final class SquadCoordinator {
         return SQUADS.size();
     }
 
+    private static final double SQUAD_REGION_RADIUS = 64.0;
+    private static final int MAX_EXTRA_PLAYERS = 8;
+
+    /**
+     * Squad-size cap, raised above {@code maxSquadSize} for players sharing the
+     * region. Multiplayer scales encounter <i>volume</i> here — the per-mob
+     * difficulty scalar still caps at 1.0.
+     */
+    private static int effectiveMaxSquadSize(ServerLevel level, BlockPos near) {
+        int base = WarbandConfig.maxSquadSize;
+        if (WarbandConfig.squadPlayerBonus <= 0) return base;
+        AABB box = AABB.ofSize(near.getCenter(),
+                SQUAD_REGION_RADIUS * 2.0, SQUAD_REGION_RADIUS * 2.0, SQUAD_REGION_RADIUS * 2.0);
+        int players = level.getEntitiesOfClass(Player.class, box,
+                player -> player.isAlive() && !player.isSpectator()).size();
+        int extra = Math.min(MAX_EXTRA_PLAYERS, Math.max(0, players - 1));
+        return base + WarbandConfig.squadPlayerBonus * extra;
+    }
+
     private static void addMob(Squad squad, Mob mob, Role role, double difficulty) {
         SpawnDirector.stamp(mob, difficulty, role, squad.id());
         addGoals(mob, squad, role);
@@ -201,7 +272,9 @@ public final class SquadCoordinator {
         accessor.warband$goalSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
         accessor.warband$targetSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
         accessor.warband$targetSelector().addGoal(0, new SquadTargetGoal(mob, squad));
-        accessor.warband$goalSelector().addGoal(2, new RetreatWhenLowGoal(mob, squad));
+        if (MobData.get(mob).difficulty() >= RETREAT_MIN_DIFFICULTY) {
+            accessor.warband$goalSelector().addGoal(2, new RetreatWhenLowGoal(mob, squad));
+        }
         accessor.warband$goalSelector().addGoal(3, new RegroupGoal(mob, squad));
         if (canCallBackup(mob)) {
             accessor.warband$goalSelector().addGoal(4, new CallBackupGoal(mob, squad));
@@ -259,6 +332,8 @@ public final class SquadCoordinator {
             accessor.warband$goalSelector().addGoal(4, new HoglinStampedeGoal(mob, squad));
         }
         if (data.hasTactic(Tactic.ILLAGER_COMMAND)) {
+            accessor.warband$goalSelector().addGoal(1, new IllagerRaidAssaultGoal(mob, squad));
+            accessor.warband$goalSelector().addGoal(2, new IllagerDoctrineGoal(mob, squad));
             accessor.warband$goalSelector().addGoal(3, new IllagerCommandGoal(mob, squad));
         }
         if (data.hasTactic(Tactic.PHANTOM_HARASS)) {
@@ -267,13 +342,14 @@ public final class SquadCoordinator {
     }
 
     private static void spawnNaturalSquadmates(Squad squad, Mob anchor, double difficulty) {
-        if (difficulty < 0.45 || squad.members().size() >= WarbandConfig.maxSquadSize) return;
+        int cap = effectiveMaxSquadSize(squad.level(), anchor.blockPosition());
+        if (difficulty < 0.45 || squad.members().size() >= cap) return;
 
-        int baseSize = 2 + (int) Math.floor(difficulty * 4.0);
+        int baseSize = 2 + (int) Math.floor(difficulty * 3.0);
         if (isZombieFamily(anchor)) {
             baseSize += 1;
         }
-        int desiredSize = Math.min(WarbandConfig.maxSquadSize, baseSize);
+        int desiredSize = Math.min(cap, baseSize);
         int toSpawn = desiredSize - squad.members().size();
         for (int i = 0; i < toSpawn; i++) {
             if (!underSmartCap(squad.level(), anchor)) break;
@@ -303,10 +379,11 @@ public final class SquadCoordinator {
     }
 
     private static Squad nearestJoinableSquad(ServerLevel level, BlockPos pos, Mob mob) {
+        int cap = effectiveMaxSquadSize(level, pos);
         Squad best = null;
         double bestDist = 10.0 * 10.0;
         for (Squad squad : SQUADS.values()) {
-            if (squad.level() != level || squad.members().size() >= WarbandConfig.maxSquadSize) continue;
+            if (squad.level() != level || squad.members().size() >= cap) continue;
             if (squad.members().isEmpty() || !sameSquadFamily(squad.members().getFirst(), mob)) continue;
             double dist = squad.center().distanceToSqr(pos.getCenter());
             if (dist < bestDist) {
@@ -318,6 +395,7 @@ public final class SquadCoordinator {
     }
 
     private static Role chooseRole(Mob mob, int index, double difficulty) {
+        if (RaidCompat.isPatrolCaptain(mob)) return Role.LEADER;
         if (index == 0 && difficulty >= 0.45) return Role.LEADER;
         if (IllagerInvasionCompat.isSupport(mob)) return Role.SUPPORT;
         if (IllagerInvasionCompat.isSkirmisher(mob)) return Role.SKIRMISHER;
@@ -365,6 +443,12 @@ public final class SquadCoordinator {
     private static boolean shouldJoinExisting(Mob mob, double difficulty) {
         if (!canCallBackup(mob) || difficulty < 0.50) return false;
         return mob.getRandom().nextFloat() < 0.25f;
+    }
+
+    private static double squadChance(double difficulty) {
+        double t = Math.max(0.0, Math.min(1.0, (difficulty - 0.25) / 0.65));
+        return WarbandConfig.naturalSquadChanceMin
+                + (WarbandConfig.naturalSquadChanceMax - WarbandConfig.naturalSquadChanceMin) * t;
     }
 
     private static boolean canCallBackup(Mob mob) {

@@ -51,7 +51,7 @@ public final class GolemSpinGoal extends Goal implements WarbandGoal {
 
         level.playSound(null, golem.getX(), golem.getY(), golem.getZ(),
                 SoundEvents.MACE_SMASH_GROUND_HEAVY, SoundSource.NEUTRAL, 1.0f, 0.85f);
-        TacticalEffects.signal(level, golem.position());
+        TacticalEffects.signal(level, golem);
 
         for (Mob threat : threats) {
             Vec3 away = threat.position().subtract(golem.position());

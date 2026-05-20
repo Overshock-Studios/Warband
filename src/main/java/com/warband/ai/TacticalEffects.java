@@ -6,6 +6,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
@@ -22,6 +23,18 @@ public final class TacticalEffects {
                 18, 0.35, 0.35, 0.35, 0.02);
     }
 
+    public static void webTrail(ServerLevel level, Vec3 from, Vec3 to) {
+        Vec3 delta = to.subtract(from);
+        int steps = 8;
+        for (int i = 1; i <= steps; i++) {
+            Vec3 point = from.add(delta.scale(i / (double) steps));
+            level.sendParticles(ParticleTypes.POOF, point.x, point.y, point.z,
+                    1, 0.03, 0.03, 0.03, 0.0);
+        }
+        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.COBWEB.defaultBlockState()),
+                to.x, to.y, to.z, 3, 0.12, 0.12, 0.12, 0.0);
+    }
+
     public static void frost(ServerLevel level, BlockPos pos) {
         level.playSound(null, pos, SoundEvents.GLASS_PLACE, SoundSource.HOSTILE, 0.6f, 1.35f);
         level.sendParticles(ParticleTypes.SNOWFLAKE,
@@ -36,9 +49,18 @@ public final class TacticalEffects {
     }
 
     public static void signal(ServerLevel level, Vec3 pos) {
-        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.HOSTILE, 0.55f, 0.6f);
         level.sendParticles(ParticleTypes.WITCH, pos.x, pos.y + 1.0, pos.z,
                 8, 0.3, 0.4, 0.3, 0.02);
+    }
+
+    public static void signal(ServerLevel level, Mob mob) {
+        mob.playAmbientSound();
+        signal(level, mob.position());
+    }
+
+    public static void horn(ServerLevel level, Vec3 pos) {
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 0.75f, 1.0f);
+        signal(level, pos);
     }
 
     public static void search(ServerLevel level, Vec3 pos) {

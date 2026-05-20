@@ -2,12 +2,19 @@ package com.warband.spawn;
 
 import com.warband.WarbandMod;
 import com.warband.ai.SquadCoordinator;
+import com.warband.compat.IllagerInvasionCompat;
 import com.warband.config.WarbandConfig;
 import com.warband.entity.IllagerIdentity;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.entity.MobData;
 import com.warband.entity.Role;
+import com.warband.entity.WarbandAttachments;
+import com.warband.entity.RoleVisuals;
 import com.warband.entity.Tactic;
+import com.warband.illager.IllagerFactionSystem;
+import com.warband.illager.FactionBanner;
+import com.warband.illager.IllagerLoadout;
+import com.warband.illager.StrongholdGarrison;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -48,17 +55,12 @@ public final class SpawnDirector {
             EntitySpawnReason.JOCKEY,
             EntitySpawnReason.EVENT);
 
-    // Buff magnitudes at difficulty 1.0. Multiplicative on base value, except
-    // knockback resistance which is a flat 0..1 add.
-    private static final double HEALTH_BONUS = 1.20;
-    private static final double DAMAGE_BONUS = 0.60;
-    private static final double SPEED_BONUS = 0.15;
-    private static final double KNOCKBACK_RESIST = 0.30;
-
     private static final Identifier HEALTH_MOD = modifierId("difficulty_health");
     private static final Identifier DAMAGE_MOD = modifierId("difficulty_damage");
     private static final Identifier SPEED_MOD = modifierId("difficulty_speed");
     private static final Identifier KNOCKBACK_MOD = modifierId("difficulty_knockback");
+    private static final Identifier WARMARSHAL_HEALTH = modifierId("warmarshal_health");
+    private static final Identifier WARMARSHAL_DAMAGE = modifierId("warmarshal_damage");
 
     private SpawnDirector() {
     }
@@ -76,9 +78,25 @@ public final class SpawnDirector {
 
         ServerLevel level = accessor.getLevel();
         double difficulty = DifficultyManager.getDifficulty(level, mob.blockPosition());
-        if (difficulty <= 0.0) return;
+        if (IllagerInvasionCompat.isIllagerLike(mob)) {
+            // Naturally-spawned stronghold illagers (e.g. outpost pillagers) are
+            // raised to the garrison floor here; mansion residents are caught on
+            // entity load by StrongholdGarrison instead.
+            difficulty = Math.max(difficulty, StrongholdGarrison.floorFor(level, mob.blockPosition()));
+        }
+        if (difficulty <= 0.0) {
+            stampIllagerIdentityOnly(mob, difficulty);
+            return;
+        }
+        if (!EncounterDirector.allowsEnhancement(level, mob.blockPosition(), mob)) {
+            stampIllagerIdentityOnly(mob, difficulty);
+            return;
+        }
 
-        if (!SquadCoordinator.assignNaturalSpawn(mob, difficulty)) {
+        boolean spawnFormation = (!IllagerInvasionCompat.isIllagerLike(mob) && reason == EntitySpawnReason.NATURAL)
+                || reason == EntitySpawnReason.PATROL
+                || reason == EntitySpawnReason.EVENT;
+        if (!SquadCoordinator.assignNaturalSpawn(mob, difficulty, spawnFormation)) {
             stamp(mob, difficulty);
         }
     }
@@ -90,6 +108,8 @@ public final class SpawnDirector {
     public static void stamp(Mob mob, double difficulty) {
         int tactics = Tactic.chooseFor(mob, difficulty, Role.NONE);
         MobData.set(mob, new MobData((float) difficulty, Role.NONE, MobData.NO_SQUAD, tactics));
+        IllagerFactionSystem.assignIfNeeded(mob);
+        FactionBanner.equipIfNeeded(mob);
         IllagerIdentity.assignIfNeeded(mob, Role.NONE, difficulty);
         if (WarbandConfig.statBuffsEnabled) {
             applyStatBuffs(mob, difficulty);
@@ -100,19 +120,57 @@ public final class SpawnDirector {
     public static void stamp(Mob mob, double difficulty, Role role, int squadId) {
         int tactics = Tactic.chooseFor(mob, difficulty, role);
         MobData.set(mob, new MobData((float) difficulty, role, squadId, tactics));
+        IllagerFactionSystem.assignIfNeeded(mob);
+        FactionBanner.equipIfNeeded(mob);
+        RoleVisuals.apply(mob, role, difficulty);
+        IllagerLoadout.equip(mob, role, difficulty);
         IllagerIdentity.assignIfNeeded(mob, role, difficulty);
         if (WarbandConfig.statBuffsEnabled) {
             applyStatBuffs(mob, difficulty);
         }
     }
 
+    /**
+     * Crown a stamped illager as its mansion's Warmarshal — the faction's apex.
+     * Deliberately outranks a bounty hunter: forced to maximum difficulty, given
+     * a heavy boss health/damage layer and lasting Strength, and renamed.
+     */
+    public static void crownWarmarshal(Mob mob) {
+        // The command-AI upgrade: guarantees command goals and squad leadership,
+        // and sets the mob's MobData (difficulty 1.0, LEADER, ILLAGER_COMMAND).
+        // A Warmarshal is the smartest illager in the garrison, not just the
+        // strongest — without this it would be the bounty-hunter mistake again.
+        SquadCoordinator.makeCommander(mob, 1.0);
+        if (WarbandConfig.statBuffsEnabled) {
+            addMultiplied(mob, Attributes.MAX_HEALTH, WARMARSHAL_HEALTH, WarbandConfig.warmarshalHealthBonus);
+            addMultiplied(mob, Attributes.ATTACK_DAMAGE, WARMARSHAL_DAMAGE, WarbandConfig.warmarshalDamageBonus);
+            mob.setHealth(mob.getMaxHealth());
+        }
+        // Strength, not Resistance: a Warmarshal is hard through health, damage,
+        // its garrison and AI — never a damage sponge.
+        mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.STRENGTH, 20 * 60 * 60, 1, false, true));
+        mob.setAttached(WarbandAttachments.WARMARSHAL, true);
+        IllagerIdentity.promoteToWarmarshal(mob);
+    }
+
     private static void applyStatBuffs(Mob mob, double difficulty) {
-        addMultiplied(mob, Attributes.MAX_HEALTH, HEALTH_MOD, difficulty * HEALTH_BONUS);
-        addMultiplied(mob, Attributes.ATTACK_DAMAGE, DAMAGE_MOD, difficulty * DAMAGE_BONUS);
-        addMultiplied(mob, Attributes.MOVEMENT_SPEED, SPEED_MOD, difficulty * SPEED_BONUS);
-        addFlat(mob, Attributes.KNOCKBACK_RESISTANCE, KNOCKBACK_MOD, difficulty * KNOCKBACK_RESIST);
+        // Linear in difficulty: tactical AI switches on at ~0.25, so enhanced mobs
+        // need real durability through the mid-game — not a back-loaded square curve.
+        double statScale = difficulty;
+        addMultiplied(mob, Attributes.MAX_HEALTH, HEALTH_MOD, statScale * WarbandConfig.statHealthBonusMax);
+        addMultiplied(mob, Attributes.ATTACK_DAMAGE, DAMAGE_MOD, statScale * WarbandConfig.statDamageBonusMax);
+        addMultiplied(mob, Attributes.MOVEMENT_SPEED, SPEED_MOD, statScale * WarbandConfig.statSpeedBonusMax);
+        addFlat(mob, Attributes.KNOCKBACK_RESISTANCE, KNOCKBACK_MOD, statScale * WarbandConfig.statKnockbackResistanceMax);
         // Health was modified above — refill so the mob spawns at its new maximum.
         mob.setHealth(mob.getMaxHealth());
+    }
+
+    private static void stampIllagerIdentityOnly(Mob mob, double difficulty) {
+        if (!IllagerInvasionCompat.isIllagerLike(mob)) return;
+        IllagerFactionSystem.assignIfNeeded(mob);
+        FactionBanner.equipIfNeeded(mob);
+        IllagerIdentity.assignIfNeeded(mob, Role.NONE, difficulty);
     }
 
     private static void addMultiplied(Mob mob, Holder<Attribute> attribute, Identifier id, double amount) {

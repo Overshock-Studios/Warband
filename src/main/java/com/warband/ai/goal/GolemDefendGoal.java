@@ -43,7 +43,7 @@ public final class GolemDefendGoal extends Goal implements WarbandGoal {
                 .min(Comparator.comparingDouble(golem::distanceToSqr))
                 .ifPresent(threat -> {
                     golem.setTarget(threat);
-                    TacticalEffects.signal((ServerLevel) golem.level(), golem.position());
+                    TacticalEffects.signal((ServerLevel) golem.level(), golem);
                 });
         return golem.getTarget() != current;
     }

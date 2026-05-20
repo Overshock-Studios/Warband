@@ -22,6 +22,10 @@ public final class Squad {
 
     private static final int LAST_KNOWN_TICKS = 20 * 12;
     private static final int BACKUP_COOLDOWN_TICKS = 20 * 30;
+    /** How long a squad routs after its leader falls. */
+    private static final int ROUT_TICKS = 20 * 8;
+    /** Perception (line-of-sight) is refreshed on this tick cadence, not every tick. */
+    private static final int PERCEPTION_INTERVAL = 5;
 
     private final int id;
     private final ServerLevel level;
@@ -30,6 +34,9 @@ public final class Squad {
     private @Nullable BlockPos lastKnownPos;
     private int lastKnownTicks;
     private int backupCooldown;
+    private int routTicks;
+    private int perceptionCounter;
+    private boolean hadLeader;
     private float morale = 1.0f;
 
     Squad(int id, ServerLevel level) {
@@ -65,6 +72,11 @@ public final class Squad {
         return backupCooldown <= 0;
     }
 
+    /** True while the squad is routing — the leader recently fell. */
+    public boolean isRouting() {
+        return routTicks > 0;
+    }
+
     public void markBackupCalled() {
         backupCooldown = BACKUP_COOLDOWN_TICKS;
     }
@@ -82,8 +94,14 @@ public final class Squad {
         if (backupCooldown > 0) {
             backupCooldown--;
         }
+        if (routTicks > 0) {
+            routTicks--;
+        }
         updateMorale();
-        updatePerception();
+        if (++perceptionCounter >= PERCEPTION_INTERVAL) {
+            perceptionCounter = 0;
+            updatePerception();
+        }
     }
 
     public boolean isEmpty() {
@@ -115,6 +133,12 @@ public final class Squad {
                 break;
             }
         }
+        // The leader just fell — the squad routs for a window, then steadies and
+        // re-engages (demoralized). A temporary break, not a permanent flee.
+        if (hadLeader && !leaderAlive) {
+            routTicks = ROUT_TICKS;
+        }
+        hadLeader = leaderAlive;
         morale = leaderAlive ? Math.min(1.0f, morale + 0.01f) : Math.max(0.2f, morale - 0.02f);
     }
 
@@ -132,7 +156,7 @@ public final class Squad {
 
         target = visibleTarget;
         if (visibleTarget == null && lastKnownTicks > 0) {
-            lastKnownTicks--;
+            lastKnownTicks -= PERCEPTION_INTERVAL;
         }
         if (lastKnownTicks <= 0) {
             lastKnownPos = null;

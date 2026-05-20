@@ -19,23 +19,27 @@ import java.util.Properties;
 public final class WarbandConfig {
 
     // ── Difficulty ──────────────────────────────────────────────────────────
-    public static DifficultyMode difficultyMode = DifficultyMode.SCORE;
+    public static DifficultyMode difficultyMode = DifficultyMode.REGIONAL;
     /** Blocks from world spawn that stay fully vanilla (difficulty 0). */
     public static int safeRadius = 256;
     /** Distance from spawn at which difficulty caps (DISTANCE mode). */
     public static int maxDifficultyRadius = 4096;
-    /** World day count at which difficulty caps (TIME mode). */
-    public static int maxDifficultyDays = 30;
     /** If true, Peaceful disables Warband and Easy/Normal lower its ceiling. */
     public static boolean respectGlobalDifficulty = true;
-    /** If true, vanilla regional difficulty feeds COMBINED as an extra term. */
+    /** If true, vanilla regional difficulty is folded in as an extra term. */
     public static boolean factorVanillaDifficulty = false;
     /** Seconds of eased difficulty after a player death. 0 disables relief. */
     public static int deathReliefSeconds = 600;
     /** How much relief eases difficulty: 0.0 none .. 1.0 full calm. */
     public static double deathReliefStrength = 0.5;
-    /** SCORE mode: fraction of the gap the score decays toward gear each second. */
+    /** Fraction of the gap a player's capability score decays toward gear each second. */
     public static double scoreDecayRate = 0.005;
+    /** REGIONAL mode: chunks around players sampled each interval. */
+    public static int regionalSampleRadiusChunks = 2;
+    public static double regionalBlendRate = 0.08;
+    public static double regionalDecayRate = 0.002;
+    /** REGIONAL mode: extra difficulty added per additional nearby player. */
+    public static double regionalPlayerBonus = 0.15;
     /** Minimum difficulty in the Nether, regardless of mode. */
     public static double netherDifficultyFloor = 0.25;
     /** Minimum difficulty in the End, regardless of mode. */
@@ -43,13 +47,55 @@ public final class WarbandConfig {
 
     // ── Squads & spawning ───────────────────────────────────────────────────
     public static boolean squadsEnabled = true;
+    /** Base squad-size cap for a solo player; raised by {@link #squadPlayerBonus}. */
     public static int maxSquadSize = 6;
+    /** Extra squad slots allowed per additional player sharing the region. */
+    public static int squadPlayerBonus = 2;
+    public static double naturalSquadChanceMin = 0.20;
+    public static double naturalSquadChanceMax = 0.60;
     /** Performance cap — most "smart AI" mobs ticked per player at once. */
     public static int maxSmartMobsPerPlayer = 24;
     /** If true, spawned hostile mobs get difficulty-scaled stat buffs. */
     public static boolean statBuffsEnabled = true;
+    public static double statHealthBonusMax = 0.35;
+    public static double statDamageBonusMax = 0.20;
+    public static double statSpeedBonusMax = 0.08;
+    public static double statKnockbackResistanceMax = 0.15;
     /** If true, situational tactics may place short-lived blocks like cobwebs/ice. */
     public static boolean temporaryTacticBlocks = true;
+    /** If true, Warband enhancement intensity cycles through build-up, peak, and relax windows. */
+    public static boolean encounterDirectorEnabled = true;
+    /** Extra enhancement chance per additional player sharing the region. */
+    public static double encounterPlayerBonus = 0.15;
+    public static int directorBuildUpSeconds = 240;
+    public static int directorPeakSeconds = 120;
+    public static int directorRelaxSeconds = 180;
+    public static double directorBuildUpEnhancementChance = 0.70;
+    public static double directorRelaxEnhancementChance = 0.15;
+    public static boolean roleVisualsEnabled = true;
+
+    // ── Illagers ────────────────────────────────────────────────────────────
+    public static boolean illagerFactionsEnabled = true;
+    public static boolean illagerDoctrineEnabled = true;
+    public static boolean illagerGrudgesEnabled = true;
+    public static boolean illagerRivalriesEnabled = true;
+    public static boolean illagerRaidDoctrineEnabled = true;
+    public static boolean illagerFactionBannersEnabled = true;
+    public static boolean illagerRoleGearEnabled = true;
+    public static boolean illagerBountyHuntersEnabled = true;
+    /** If true, mansions and outposts become elevated faction strongholds. */
+    public static boolean illagerStrongholdsEnabled = true;
+    /** Minimum difficulty for the garrison of a mansion-tier faction seat. */
+    public static double mansionGarrisonFloor = 1.0;
+    /** Minimum difficulty for the garrison of an outpost-tier faction camp. */
+    public static double outpostGarrisonFloor = 0.5;
+    /** Boss bonus health for a mansion Warmarshal (base multiplier, on top of stat buffs). */
+    public static double warmarshalHealthBonus = 1.5;
+    /** Boss bonus attack damage for a mansion Warmarshal (base multiplier). */
+    public static double warmarshalDamageBonus = 0.5;
+
+    // ── Items ──────────────────────────────────────────────────────────────
+    public static boolean goatHornCommandEnabled = true;
 
     // ── Display ─────────────────────────────────────────────────────────────
     /** Client-side: show the difficulty-lens HUD readout. */
@@ -73,20 +119,53 @@ public final class WarbandConfig {
         difficultyMode = parseMode(props, difficultyMode, logger);
         safeRadius = parseInt(props, "safeRadius", safeRadius, 0, 100_000, logger);
         maxDifficultyRadius = parseInt(props, "maxDifficultyRadius", maxDifficultyRadius, 1, 1_000_000, logger);
-        maxDifficultyDays = parseInt(props, "maxDifficultyDays", maxDifficultyDays, 1, 100_000, logger);
         respectGlobalDifficulty = parseBoolean(props, "respectGlobalDifficulty", respectGlobalDifficulty, logger);
         factorVanillaDifficulty = parseBoolean(props, "factorVanillaDifficulty", factorVanillaDifficulty, logger);
         deathReliefSeconds = parseInt(props, "deathReliefSeconds", deathReliefSeconds, 0, 100_000, logger);
         deathReliefStrength = parseDouble(props, "deathReliefStrength", deathReliefStrength, 0.0, 1.0, logger);
         scoreDecayRate = parseDouble(props, "scoreDecayRate", scoreDecayRate, 0.0, 1.0, logger);
+        regionalSampleRadiusChunks = parseInt(props, "regionalSampleRadiusChunks", regionalSampleRadiusChunks, 0, 16, logger);
+        regionalBlendRate = parseDouble(props, "regionalBlendRate", regionalBlendRate, 0.0, 1.0, logger);
+        regionalDecayRate = parseDouble(props, "regionalDecayRate", regionalDecayRate, 0.0, 1.0, logger);
+        regionalPlayerBonus = parseDouble(props, "regionalPlayerBonus", regionalPlayerBonus, 0.0, 1.0, logger);
         netherDifficultyFloor = parseDouble(props, "netherDifficultyFloor", netherDifficultyFloor, 0.0, 1.0, logger);
         endDifficultyFloor = parseDouble(props, "endDifficultyFloor", endDifficultyFloor, 0.0, 1.0, logger);
 
         squadsEnabled = parseBoolean(props, "squadsEnabled", squadsEnabled, logger);
         maxSquadSize = parseInt(props, "maxSquadSize", maxSquadSize, 1, 64, logger);
+        squadPlayerBonus = parseInt(props, "squadPlayerBonus", squadPlayerBonus, 0, 32, logger);
+        naturalSquadChanceMin = parseDouble(props, "naturalSquadChanceMin", naturalSquadChanceMin, 0.0, 1.0, logger);
+        naturalSquadChanceMax = parseDouble(props, "naturalSquadChanceMax", naturalSquadChanceMax, 0.0, 1.0, logger);
         maxSmartMobsPerPlayer = parseInt(props, "maxSmartMobsPerPlayer", maxSmartMobsPerPlayer, 1, 512, logger);
         statBuffsEnabled = parseBoolean(props, "statBuffsEnabled", statBuffsEnabled, logger);
+        statHealthBonusMax = parseDouble(props, "statHealthBonusMax", statHealthBonusMax, 0.0, 10.0, logger);
+        statDamageBonusMax = parseDouble(props, "statDamageBonusMax", statDamageBonusMax, 0.0, 10.0, logger);
+        statSpeedBonusMax = parseDouble(props, "statSpeedBonusMax", statSpeedBonusMax, 0.0, 10.0, logger);
+        statKnockbackResistanceMax = parseDouble(props, "statKnockbackResistanceMax", statKnockbackResistanceMax, 0.0, 1.0, logger);
         temporaryTacticBlocks = parseBoolean(props, "temporaryTacticBlocks", temporaryTacticBlocks, logger);
+        encounterDirectorEnabled = parseBoolean(props, "encounterDirectorEnabled", encounterDirectorEnabled, logger);
+        encounterPlayerBonus = parseDouble(props, "encounterPlayerBonus", encounterPlayerBonus, 0.0, 1.0, logger);
+        directorBuildUpSeconds = parseInt(props, "directorBuildUpSeconds", directorBuildUpSeconds, 1, 100_000, logger);
+        directorPeakSeconds = parseInt(props, "directorPeakSeconds", directorPeakSeconds, 1, 100_000, logger);
+        directorRelaxSeconds = parseInt(props, "directorRelaxSeconds", directorRelaxSeconds, 1, 100_000, logger);
+        directorBuildUpEnhancementChance = parseDouble(props, "directorBuildUpEnhancementChance", directorBuildUpEnhancementChance, 0.0, 1.0, logger);
+        directorRelaxEnhancementChance = parseDouble(props, "directorRelaxEnhancementChance", directorRelaxEnhancementChance, 0.0, 1.0, logger);
+        roleVisualsEnabled = parseBoolean(props, "roleVisualsEnabled", roleVisualsEnabled, logger);
+
+        illagerFactionsEnabled = parseBoolean(props, "illagerFactionsEnabled", illagerFactionsEnabled, logger);
+        illagerDoctrineEnabled = parseBoolean(props, "illagerDoctrineEnabled", illagerDoctrineEnabled, logger);
+        illagerGrudgesEnabled = parseBoolean(props, "illagerGrudgesEnabled", illagerGrudgesEnabled, logger);
+        illagerRivalriesEnabled = parseBoolean(props, "illagerRivalriesEnabled", illagerRivalriesEnabled, logger);
+        illagerRaidDoctrineEnabled = parseBoolean(props, "illagerRaidDoctrineEnabled", illagerRaidDoctrineEnabled, logger);
+        illagerFactionBannersEnabled = parseBoolean(props, "illagerFactionBannersEnabled", illagerFactionBannersEnabled, logger);
+        illagerRoleGearEnabled = parseBoolean(props, "illagerRoleGearEnabled", illagerRoleGearEnabled, logger);
+        illagerBountyHuntersEnabled = parseBoolean(props, "illagerBountyHuntersEnabled", illagerBountyHuntersEnabled, logger);
+        illagerStrongholdsEnabled = parseBoolean(props, "illagerStrongholdsEnabled", illagerStrongholdsEnabled, logger);
+        mansionGarrisonFloor = parseDouble(props, "mansionGarrisonFloor", mansionGarrisonFloor, 0.0, 1.0, logger);
+        outpostGarrisonFloor = parseDouble(props, "outpostGarrisonFloor", outpostGarrisonFloor, 0.0, 1.0, logger);
+        warmarshalHealthBonus = parseDouble(props, "warmarshalHealthBonus", warmarshalHealthBonus, 0.0, 10.0, logger);
+        warmarshalDamageBonus = parseDouble(props, "warmarshalDamageBonus", warmarshalDamageBonus, 0.0, 10.0, logger);
+        goatHornCommandEnabled = parseBoolean(props, "goatHornCommandEnabled", goatHornCommandEnabled, logger);
         hudEnabled = parseBoolean(props, "hudEnabled", hudEnabled, logger);
 
         save(logger);
@@ -108,24 +187,28 @@ public final class WarbandConfig {
                 # Changes take effect on world reload or server restart.
 
                 # ── Difficulty ────────────────────────────────────────────────────
-                # How local difficulty is derived: DISTANCE, TIME, SCORE, or COMBINED.
+                # How local difficulty is derived: DISTANCE, SCORE, or REGIONAL.
                 difficultyMode=%s
                 # Blocks from world spawn that stay fully vanilla (difficulty 0).
                 safeRadius=%d
                 # Distance from spawn at which difficulty caps (DISTANCE mode).
                 maxDifficultyRadius=%d
-                # World day count at which difficulty caps (TIME mode).
-                maxDifficultyDays=%d
                 # Peaceful disables Warband; Easy/Normal lower its difficulty ceiling.
                 respectGlobalDifficulty=%s
-                # Fold vanilla regional difficulty into COMBINED mode as an extra term.
+                # Fold vanilla regional difficulty in as an extra term.
                 factorVanillaDifficulty=%s
                 # Seconds of eased difficulty after a player death (0 disables).
                 deathReliefSeconds=%d
                 # How much a death eases difficulty: 0.0 none .. 1.0 full calm.
                 deathReliefStrength=%s
-                # SCORE mode: fraction of the gap the score decays toward gear each second.
+                # Fraction of the gap a capability score decays toward gear each second.
                 scoreDecayRate=%s
+                # REGIONAL mode: nearby chunks learn the running average player score.
+                regionalSampleRadiusChunks=%d
+                regionalBlendRate=%s
+                regionalDecayRate=%s
+                # REGIONAL mode: extra difficulty added per additional nearby player.
+                regionalPlayerBonus=%s
                 # Minimum difficulty in the Nether, regardless of mode.
                 netherDifficultyFloor=%s
                 # Minimum difficulty in the End, regardless of mode.
@@ -133,14 +216,68 @@ public final class WarbandConfig {
                 # ── Squads & spawning ─────────────────────────────────────────────
                 # If true, mobs may spawn as role-based squads at higher difficulty.
                 squadsEnabled=%s
-                # Largest squad that can spawn.
+                # Base squad-size cap for a solo player.
                 maxSquadSize=%d
+                # Extra squad slots allowed per additional player sharing the region.
+                squadPlayerBonus=%d
+                # Chance eligible natural mobs become squad actors, scaled by local difficulty.
+                naturalSquadChanceMin=%s
+                naturalSquadChanceMax=%s
                 # Performance cap: most tactical-AI mobs ticked per player at once.
                 maxSmartMobsPerPlayer=%d
                 # If true, spawned hostile mobs get difficulty-scaled stat buffs.
                 statBuffsEnabled=%s
+                # Maximum stat bonuses at Warband difficulty 1.0. Health/damage/speed are base multipliers.
+                statHealthBonusMax=%s
+                statDamageBonusMax=%s
+                statSpeedBonusMax=%s
+                # Maximum flat knockback resistance added at Warband difficulty 1.0.
+                statKnockbackResistanceMax=%s
                 # If true, smarter mobs may place short-lived tactical blocks like cobwebs or ice.
                 temporaryTacticBlocks=%s
+                # If true, Warband enhancement intensity cycles through build-up, peak, and relax windows.
+                encounterDirectorEnabled=%s
+                # Extra enhancement chance per additional player sharing the region.
+                encounterPlayerBonus=%s
+                # Encounter director phase lengths.
+                directorBuildUpSeconds=%d
+                directorPeakSeconds=%d
+                directorRelaxSeconds=%d
+                # Chance that an otherwise eligible mob receives Warband enhancements during build-up / relax.
+                directorBuildUpEnhancementChance=%s
+                directorRelaxEnhancementChance=%s
+                # If true, squadded mobs get visible role silhouettes/equipment.
+                roleVisualsEnabled=%s
+
+                # ── Illagers ─────────────────────────────────────────────────────
+                # If true, illagers receive regional faction identity in names and grudge records.
+                illagerFactionsEnabled=%s
+                # If true, illager squads use role/faction doctrine movement.
+                illagerDoctrineEnabled=%s
+                # If true, non-raid illager witnesses can remember players and return later.
+                illagerGrudgesEnabled=%s
+                # If true, rival factions can shadow or intercept revenge attacks.
+                illagerRivalriesEnabled=%s
+                # If true, active raid illagers use settlement assault doctrine.
+                illagerRaidDoctrineEnabled=%s
+                # If true, factioned illagers carry colored faction banners.
+                illagerFactionBannersEnabled=%s
+                # If true, Warband illagers receive role-appropriate equipment.
+                illagerRoleGearEnabled=%s
+                # If true, high faction heat can trigger elite bounty hunters.
+                illagerBountyHuntersEnabled=%s
+                # If true, mansions and outposts become elevated faction strongholds.
+                illagerStrongholdsEnabled=%s
+                # Minimum difficulty for a mansion / outpost garrison.
+                mansionGarrisonFloor=%s
+                outpostGarrisonFloor=%s
+                # Mansion Warmarshal boss bonuses (base multipliers, on top of stat buffs).
+                warmarshalHealthBonus=%s
+                warmarshalDamageBonus=%s
+
+                # ── Items ────────────────────────────────────────────────────────
+                # If true, goat horns also rally nearby golems and disrupt Warband illagers.
+                goatHornCommandEnabled=%s
 
                 # ── Display ───────────────────────────────────────────────────────
                 # Client-side: show the difficulty-lens HUD readout.
@@ -149,19 +286,51 @@ public final class WarbandConfig {
                     difficultyMode,
                     safeRadius,
                     maxDifficultyRadius,
-                    maxDifficultyDays,
                     respectGlobalDifficulty,
                     factorVanillaDifficulty,
                     deathReliefSeconds,
                     deathReliefStrength,
                     scoreDecayRate,
+                    regionalSampleRadiusChunks,
+                    regionalBlendRate,
+                    regionalDecayRate,
+                    regionalPlayerBonus,
                     netherDifficultyFloor,
                     endDifficultyFloor,
                     squadsEnabled,
                     maxSquadSize,
+                    squadPlayerBonus,
+                    naturalSquadChanceMin,
+                    naturalSquadChanceMax,
                     maxSmartMobsPerPlayer,
                     statBuffsEnabled,
+                    statHealthBonusMax,
+                    statDamageBonusMax,
+                    statSpeedBonusMax,
+                    statKnockbackResistanceMax,
                     temporaryTacticBlocks,
+                    encounterDirectorEnabled,
+                    encounterPlayerBonus,
+                    directorBuildUpSeconds,
+                    directorPeakSeconds,
+                    directorRelaxSeconds,
+                    directorBuildUpEnhancementChance,
+                    directorRelaxEnhancementChance,
+                    roleVisualsEnabled,
+                    illagerFactionsEnabled,
+                    illagerDoctrineEnabled,
+                    illagerGrudgesEnabled,
+                    illagerRivalriesEnabled,
+                    illagerRaidDoctrineEnabled,
+                    illagerFactionBannersEnabled,
+                    illagerRoleGearEnabled,
+                    illagerBountyHuntersEnabled,
+                    illagerStrongholdsEnabled,
+                    mansionGarrisonFloor,
+                    outpostGarrisonFloor,
+                    warmarshalHealthBonus,
+                    warmarshalDamageBonus,
+                    goatHornCommandEnabled,
                     hudEnabled
                 );
     }

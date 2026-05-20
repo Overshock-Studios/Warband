@@ -9,14 +9,14 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * The difficulty lens — a small top-left HUD readout of local difficulty and
- * the player's capability score. Difficulty is otherwise invisible, so this is
- * the player's window onto the system.
+ * the player's own power (capability). Difficulty is otherwise invisible, so
+ * this is the player's window onto the system.
  */
 public final class DifficultyLensHud implements HudElement {
 
     private static final int MARGIN = 4;
     private static final int LINE_HEIGHT = 10;
-    private static final int SCORE_COLOR = 0xFFAAAAAA;
+    private static final int POWER_COLOR = 0xFFAAAAAA;
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
@@ -28,10 +28,10 @@ public final class DifficultyLensHud implements HudElement {
         Font font = minecraft.font;
         float difficulty = ClientDifficultyState.difficulty();
         String difficultyLine = String.format("Difficulty %.0f%%", difficulty * 100.0f);
-        String scoreLine = String.format("Score %.0f%%", ClientDifficultyState.score() * 100.0f);
+        String powerLine = String.format("Power %.0f%%", ClientDifficultyState.score() * 100.0f);
 
         graphics.text(font, difficultyLine, MARGIN, MARGIN, difficultyColor(difficulty));
-        graphics.text(font, scoreLine, MARGIN, MARGIN + LINE_HEIGHT, SCORE_COLOR);
+        graphics.text(font, powerLine, MARGIN, MARGIN + LINE_HEIGHT, POWER_COLOR);
     }
 
     /** Ramps from calm green at 0 to alarming red at 1. */

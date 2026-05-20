@@ -1,14 +1,20 @@
 package com.warband;
 
 import com.warband.ally.GolemDirector;
+import com.warband.ai.FriendlyFireHandler;
 import com.warband.command.WarbandCommand;
 import com.warband.ai.SquadCoordinator;
 import com.warband.ai.TemporaryTacticBlocks;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.PlayerScore;
+import com.warband.difficulty.RegionalDifficulty;
 import com.warband.entity.WarbandAttachments;
+import com.warband.illager.IllagerGrudgeSystem;
+import com.warband.illager.StrongholdGarrison;
+import com.warband.item.GoatHornCommand;
 import com.warband.net.DifficultyLensPayload;
 import com.warband.net.DifficultyLensSync;
+import com.warband.spawn.EncounterDirector;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import org.slf4j.Logger;
@@ -34,10 +40,16 @@ public final class WarbandMod implements ModInitializer {
         WarbandConfig.load(LOGGER);
         WarbandAttachments.init();
         PlayerScore.register();
+        RegionalDifficulty.register();
         WarbandCommand.register();
         TemporaryTacticBlocks.register();
+        EncounterDirector.register();
+        FriendlyFireHandler.register();
+        GoatHornCommand.register();
         SquadCoordinator.register();
         GolemDirector.register();
+        IllagerGrudgeSystem.register();
+        StrongholdGarrison.register();
 
         PayloadTypeRegistry.clientboundPlay().register(DifficultyLensPayload.TYPE, DifficultyLensPayload.CODEC);
         DifficultyLensSync.register();

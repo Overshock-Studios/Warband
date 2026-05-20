@@ -99,7 +99,7 @@ public final class PlayerScore {
         double armor = clamp01(player.getAttributeValue(Attributes.ARMOR) / ARMOR_MAX);
         double toughness = clamp01(player.getAttributeValue(Attributes.ARMOR_TOUGHNESS) / TOUGHNESS_MAX);
         double attack = clamp01((player.getAttributeValue(Attributes.ATTACK_DAMAGE) - 1.0) / ATTACK_SPAN);
-        return clamp01(0.35 * armor + 0.15 * toughness + 0.25 * attack);
+        return clamp01(0.45 * armor + 0.25 * toughness + 0.30 * attack);
     }
 
     private static double clamp01(double v) {

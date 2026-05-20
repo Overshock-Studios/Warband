@@ -1,6 +1,9 @@
 package com.warband.entity;
 
 import com.warband.compat.IllagerInvasionCompat;
+import com.warband.config.WarbandConfig;
+import com.warband.illager.IllagerFaction;
+import com.warband.illager.IllagerFactionSystem;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Mob;
 
@@ -25,13 +28,41 @@ public final class IllagerIdentity {
             rank = title;
         }
         String name = NAMES[Math.floorMod(mob.getUUID().hashCode(), NAMES.length)];
-        mob.setCustomName(Component.literal(rank + " " + name));
-        mob.setCustomNameVisible(difficulty >= 0.65 || role == Role.LEADER);
+        if (!WarbandConfig.illagerFactionsEnabled) {
+            mob.setCustomName(Component.literal(rank + " " + name));
+            // Hover-only: a visible custom name renders through walls, which reads as
+        // a wallhack. Names show when the player looks at the mob.
+        mob.setCustomNameVisible(false);
+            return;
+        }
+        IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
+        mob.setCustomName(Component.literal(rank + " " + name + " of the " + faction.displayName()));
+        // Hover-only: a visible custom name renders through walls, which reads as
+        // a wallhack. Names show when the player looks at the mob.
+        mob.setCustomNameVisible(false);
+    }
+
+    /**
+     * Re-name a mob as its stronghold's single Warmarshal. Called once per
+     * mansion by {@code StrongholdGarrison}; overrides the rank from
+     * {@link #assignIfNeeded}.
+     */
+    public static void promoteToWarmarshal(Mob mob) {
+        if (!IllagerInvasionCompat.isIllagerLike(mob)) return;
+        String name = NAMES[Math.floorMod(mob.getUUID().hashCode(), NAMES.length)];
+        if (!WarbandConfig.illagerFactionsEnabled) {
+            mob.setCustomName(Component.literal("Warmarshal " + name));
+        } else {
+            IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
+            mob.setCustomName(Component.literal("Warmarshal " + name + " of the " + faction.displayName()));
+        }
+        mob.setCustomNameVisible(false);
     }
 
     private static String rank(Role role, double difficulty) {
         if (role == Role.LEADER) {
-            if (difficulty >= 0.85) return "Warmarshal";
+            // "Warmarshal" is not auto-assigned — it is a single per-stronghold
+            // title granted by StrongholdGarrison via promoteToWarmarshal.
             if (difficulty >= 0.65) return "Captain";
             return "Sergeant";
         }

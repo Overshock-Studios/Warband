@@ -24,7 +24,7 @@ public final class HoglinStampedeGoal extends SquadGoal {
 
         mob.addEffect(new MobEffectInstance(MobEffects.SPEED, 100, 0, false, true));
         mob.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 100, 0, false, true));
-        TacticalEffects.signal((ServerLevel) mob.level(), mob.position());
+        TacticalEffects.signal((ServerLevel) mob.level(), mob);
         return mob.getNavigation().moveTo(target, speed);
     }
 }

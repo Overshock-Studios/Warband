@@ -1,0 +1,59 @@
+package com.warband.illager;
+
+import com.mojang.serialization.Codec;
+
+import java.util.List;
+
+public enum IllagerFaction {
+    BLACK_HORN("black_horn", "Black Horn", FactionDoctrine.HUNT),
+    RED_LEDGER("red_ledger", "Red Ledger", FactionDoctrine.COMMAND),
+    PALE_AXE("pale_axe", "Pale Axe", FactionDoctrine.SIEGE),
+    ASH_BANNER("ash_banner", "Ash Banner", FactionDoctrine.BURN),
+    IRON_CHOIR("iron_choir", "Iron Choir", FactionDoctrine.PURGE);
+
+    public static final Codec<IllagerFaction> CODEC = Codec.STRING.xmap(IllagerFaction::byId, IllagerFaction::id);
+    private static final List<IllagerFaction> VALUES = List.of(values());
+
+    private final String id;
+    private final String displayName;
+    private final FactionDoctrine doctrine;
+
+    IllagerFaction(String id, String displayName, FactionDoctrine doctrine) {
+        this.id = id;
+        this.displayName = displayName;
+        this.doctrine = doctrine;
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public String displayName() {
+        return displayName;
+    }
+
+    public FactionDoctrine doctrine() {
+        return doctrine;
+    }
+
+    public IllagerFaction rival() {
+        return switch (this) {
+            case BLACK_HORN -> PALE_AXE;
+            case PALE_AXE -> BLACK_HORN;
+            case RED_LEDGER -> ASH_BANNER;
+            case ASH_BANNER -> RED_LEDGER;
+            case IRON_CHOIR -> BLACK_HORN;
+        };
+    }
+
+    public static IllagerFaction pick(int seed) {
+        return VALUES.get(Math.floorMod(seed, VALUES.size()));
+    }
+
+    private static IllagerFaction byId(String id) {
+        for (IllagerFaction faction : values()) {
+            if (faction.id.equals(id)) return faction;
+        }
+        return BLACK_HORN;
+    }
+}

@@ -22,7 +22,7 @@ public final class CallBackupGoal extends SquadGoal {
     @Override
     public void start() {
         if (SquadCoordinator.callBackup(squad, mob.blockPosition())) {
-            TacticalEffects.signal((ServerLevel) mob.level(), mob.position());
+            TacticalEffects.signal((ServerLevel) mob.level(), mob);
             squad.markBackupCalled();
         }
     }

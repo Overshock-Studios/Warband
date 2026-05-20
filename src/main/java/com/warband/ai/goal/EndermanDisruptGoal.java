@@ -37,7 +37,7 @@ public final class EndermanDisruptGoal extends SquadGoal {
             mob.randomTeleport(behind.x, behind.y, behind.z, true);
         }
         if (placed) {
-            TacticalEffects.signal(level, mob.position());
+            TacticalEffects.signal(level, mob);
         }
         return placed;
     }

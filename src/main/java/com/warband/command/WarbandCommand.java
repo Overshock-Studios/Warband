@@ -8,6 +8,7 @@ import com.warband.config.WarbandConfig;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.entity.MobData;
 import com.warband.entity.WarbandAttachments;
+import com.warband.illager.IllagerGrudgeSystem;
 import com.warband.spawn.SpawnDirector;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
@@ -51,7 +52,10 @@ public final class WarbandCommand {
                                                 .executes(WarbandCommand::debugSpawn)))
                                 .then(Commands.literal("squad")
                                         .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
-                                                .executes(WarbandCommand::debugSquad))))));
+                                                .executes(WarbandCommand::debugSquad)))
+                                .then(Commands.literal("revenge")
+                                        .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
+                                                .executes(WarbandCommand::debugRevenge))))));
     }
 
     private static int reportDifficulty(CommandContext<CommandSourceStack> ctx) {
@@ -71,7 +75,7 @@ public final class WarbandCommand {
         if (player != null) {
             Float score = player.getAttached(WarbandAttachments.PLAYER_SCORE);
             source.sendSuccess(() -> Component.literal(String.format(
-                    "  your score=%.2f", score != null ? score : 0.0f)), false);
+                    "  your power=%.2f", score != null ? score : 0.0f)), false);
         }
         return 1;
     }
@@ -110,6 +114,26 @@ public final class WarbandCommand {
                 "[Warband] Spawned squad %d with %d mob(s) at difficulty %.2f",
                 squad.id(), count, difficulty)), false);
         return count;
+    }
+
+    /** Forces an illager revenge party against the executing player. */
+    private static int debugRevenge(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal("[Warband] Revenge debug requires a player source."));
+            return 0;
+        }
+
+        double difficulty = DoubleArgumentType.getDouble(ctx, "difficulty");
+        if (!IllagerGrudgeSystem.debugSpawnRevengeParty(player, difficulty)) {
+            source.sendFailure(Component.literal("[Warband] Failed to find a revenge-party spawn position."));
+            return 0;
+        }
+
+        source.sendSuccess(() -> Component.literal(String.format(
+                "[Warband] Spawned debug revenge party at difficulty %.2f", difficulty)), false);
+        return 1;
     }
 
     /** Reports Warband-stamped mobs within {@link #MOB_SCAN_SIZE} blocks. */
