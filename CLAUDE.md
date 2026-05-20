@@ -33,8 +33,10 @@ cd $env:TEMP
 - **One difficulty scalar.** `DifficultyManager.getDifficulty(...)` returns
   `0.0..1.0`. Every system (stat buffs, AI tier, squad size, spawn pacing)
   reads that one number. Do not scatter difficulty math.
-- **Stamp difficulty on the mob.** Spawned mobs should carry their difficulty as
-  a data component — so a mob owns its level and other mods can read it.
+- **Stamp difficulty on the mob.** Spawned mobs carry their difficulty via the
+  Fabric Data Attachment API (`com.warband.entity.WarbandAttachments#MOB_DATA`,
+  holding a `MobData` record) — so a mob owns its level and other mods can read
+  it. Entities cannot use data components; those are item-stack-scoped.
 - **Performance is a first-class constraint.** Custom AI goals tick per-mob
   per-tick; squads add inter-mob comms; group spawns multiply it. Throttle
   expensive scans (LOS/cover) to every N ticks, cap squad size, honor
@@ -45,6 +47,7 @@ cd $env:TEMP
 
 ## Package layout
 - `com.warband` — entrypoints (`WarbandMod`, `WarbandClient`)
+- `com.warband.entity` — `MobData`, `Role`, `WarbandAttachments`
 - `com.warband.config` — `WarbandConfig` (file-backed, `config/warband.properties`)
 - `com.warband.difficulty` — `DifficultyManager`, `DifficultyMode`
 - `com.warband.ai` — `SquadCoordinator` (stub)
