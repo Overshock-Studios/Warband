@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "warband",
+  "version": "${version}",
+  "name": "Warband",
+  "description": "Vanilla mob AI and spawning overhaul. Difficulty scales with distance from spawn (or time / player score). Mobs spawn in squads with combat roles, fight tactically, and pillagers rise through a nemesis-style warchief hierarchy.",
+  "authors": [
+    "Divesh Gupta"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.warband.WarbandMod"
+    ],
+    "client": [
+      "com.warband.WarbandClient"
+    ]
+  },
+  "mixins": [
+    "warband.mixins.json"
+  ],
+  "accessWidener": "warband.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.19.2",
+    "minecraft": "~26.1",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

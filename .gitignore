@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse
+.settings/
+.classpath
+.project
+bin/
+
+# Local Server / Run Directory
+run/
+logs/
+crash-reports/
+usercache.json
+banned-ips.json
+banned-players.json
+ops.json
+whitelist.json
+server.properties
+eula.txt
+
+# OS Generated
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
