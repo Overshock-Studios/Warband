@@ -7,8 +7,8 @@ import net.minecraft.server.level.ServerLevel;
 /**
  * The single source of truth for local difficulty.
  *
- * <p>Everything else — stat buffs, AI tier, squad size, spawn pacing, nemesis
- * promotion odds — reads one normalized scalar from here: {@code 0.0} is
+ * <p>Everything else — stat buffs, AI tier, squad size, spawn pacing — reads
+ * one normalized scalar from here: {@code 0.0} is
  * vanilla-calm, {@code 1.0} is maximum. Keep it that way; one scalar in, many
  * systems out. The intent is also to stamp this value onto each mob (as a data
  * component) at spawn, so a mob carries its own difficulty and other mods can

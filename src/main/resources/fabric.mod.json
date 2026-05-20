@@ -3,7 +3,7 @@
   "id": "warband",
   "version": "${version}",
   "name": "Warband",
-  "description": "Vanilla mob AI and spawning overhaul. Difficulty scales with distance from spawn (or time / player score). Mobs spawn in squads with combat roles, fight tactically, and pillagers rise through a nemesis-style warchief hierarchy.",
+  "description": "Vanilla mob AI and spawning overhaul. Difficulty scales with distance from spawn (or time / player score). Standard overworld, Nether, and End mobs spawn in squads with combat roles and fight tactically.",
   "authors": [
     "Divesh Gupta"
   ],

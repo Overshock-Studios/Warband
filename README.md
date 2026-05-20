@@ -4,8 +4,7 @@
 vanilla-calm. The further out you go, the deadlier it gets — and "deadlier"
 doesn't just mean bigger health bars. Mobs get *smarter*: they spawn in
 role-based squads, fight tactically, retreat, take cover, and call for backup.
-Pillagers rise through a nemesis-style warchief hierarchy — named rivals that
-remember you.
+Applies to standard overworld, Nether, and End mobs.
 
 > Early development. The scaffold runs; the systems below are being built.
 
@@ -24,8 +23,6 @@ derived is configurable:
 - **Spawn Director** — paced encounters (lulls and waves), not a random trickle.
 - **Squad AI** — role-based groups (Bruiser, Skirmisher, Marksman, Support,
   Leader) sharing a squad blackboard; tactical retreat, flanking, backup calls.
-- **Nemesis** — named pillager warchiefs with persistent memory, ranks, and
-  strengths/weaknesses; they lead the warbands.
 - **Difficulty Lens** — a HUD readout so local threat is visible.
 
 ## Building

@@ -33,9 +33,6 @@ public final class WarbandConfig {
     /** Performance cap — most "smart AI" mobs ticked per player at once. */
     public static int maxSmartMobsPerPlayer = 24;
 
-    // ── Nemesis ─────────────────────────────────────────────────────────────
-    public static boolean nemesisEnabled = true;
-
     private static final Path CONFIG_PATH = Path.of("config", "warband.properties");
 
     private WarbandConfig() {
@@ -59,8 +56,6 @@ public final class WarbandConfig {
         squadsEnabled = parseBoolean(props, "squadsEnabled", squadsEnabled, logger);
         maxSquadSize = parseInt(props, "maxSquadSize", maxSquadSize, 1, 64, logger);
         maxSmartMobsPerPlayer = parseInt(props, "maxSmartMobsPerPlayer", maxSmartMobsPerPlayer, 1, 512, logger);
-
-        nemesisEnabled = parseBoolean(props, "nemesisEnabled", nemesisEnabled, logger);
 
         save(logger);
         logger.info("[Warband] Config loaded");
@@ -97,10 +92,6 @@ public final class WarbandConfig {
                 maxSquadSize=%d
                 # Performance cap: most tactical-AI mobs ticked per player at once.
                 maxSmartMobsPerPlayer=%d
-
-                # ── Nemesis ───────────────────────────────────────────────────────
-                # If true, pillagers can rise through a nemesis-style warchief hierarchy.
-                nemesisEnabled=%s
                 """.formatted(
                     difficultyMode,
                     safeRadius,
@@ -108,8 +99,7 @@ public final class WarbandConfig {
                     maxDifficultyDays,
                     squadsEnabled,
                     maxSquadSize,
-                    maxSmartMobsPerPlayer,
-                    nemesisEnabled
+                    maxSmartMobsPerPlayer
                 );
     }
 

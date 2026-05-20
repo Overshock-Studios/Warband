@@ -13,8 +13,7 @@ import org.slf4j.LoggerFactory;
  * world ages / the player's score climbs (time / score modes — see
  * {@link com.warband.difficulty.DifficultyMode}). Difficulty buffs not just mob
  * stats but their AI: squad spawns with combat roles, tactical retreat, calling
- * for backup. Pillagers additionally rise through a nemesis-style warchief
- * hierarchy.
+ * for backup. Applies to standard overworld, Nether, and End mobs.
  */
 public final class WarbandMod implements ModInitializer {
 
@@ -26,7 +25,7 @@ public final class WarbandMod implements ModInitializer {
         WarbandConfig.load(LOGGER);
 
         // TODO: register the difficulty tick, spawn director, squad coordinator,
-        //       nemesis system, and the /warband command here.
+        //       and the /warband command here.
 
         LOGGER.info("[Warband] initialized");
     }

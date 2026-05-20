@@ -1,4 +1,4 @@
 accessWidener v2 official
 
-# Add access wideners here as the AI / spawn / nemesis systems need them.
+# Add access wideners here as the AI / spawn systems need them.
 # Likely candidates: Mob goal selectors, Brain internals, NaturalSpawner hooks.

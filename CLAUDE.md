@@ -3,8 +3,12 @@
 ## What this is
 Vanilla mob AI + spawning overhaul. Difficulty scales with distance from world
 spawn (or time / player score). Difficulty buffs mob **AI**, not just stats:
-role-based squad spawns, tactical retreat / cover / backup, and a nemesis-style
-warchief hierarchy for pillagers.
+role-based squad spawns and tactical retreat / cover / backup. Applies to
+standard overworld, Nether, and End mobs.
+
+A pillager nemesis/warchief system was considered and dropped — it only works
+atop a full pillager-behavior overhaul (territory, recruitment, faction memory),
+which is a separate mod's worth of scope. Out of scope for Warband.
 
 ## Env
 - MC 26.1.2, Fabric Loader 0.19.2, Fabric API 0.149.0+26.1.2
@@ -27,8 +31,8 @@ cd $env:TEMP
 
 ## Architecture
 - **One difficulty scalar.** `DifficultyManager.getDifficulty(...)` returns
-  `0.0..1.0`. Every system (stat buffs, AI tier, squad size, spawn pacing,
-  nemesis odds) reads that one number. Do not scatter difficulty math.
+  `0.0..1.0`. Every system (stat buffs, AI tier, squad size, spawn pacing)
+  reads that one number. Do not scatter difficulty math.
 - **Stamp difficulty on the mob.** Spawned mobs should carry their difficulty as
   a data component — so a mob owns its level and other mods can read it.
 - **Performance is a first-class constraint.** Custom AI goals tick per-mob
@@ -45,7 +49,6 @@ cd $env:TEMP
 - `com.warband.difficulty` — `DifficultyManager`, `DifficultyMode`
 - `com.warband.ai` — `SquadCoordinator` (stub)
 - `com.warband.spawn` — `SpawnDirector` (stub)
-- `com.warband.nemesis` — `NemesisSystem` (stub)
 - `com.warband.mixin` — mixins (none yet)
 
 ## Config style
