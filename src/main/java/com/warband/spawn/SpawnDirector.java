@@ -3,6 +3,7 @@ package com.warband.spawn;
 import com.warband.WarbandMod;
 import com.warband.ai.SquadCoordinator;
 import com.warband.config.WarbandConfig;
+import com.warband.entity.IllagerIdentity;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.entity.MobData;
 import com.warband.entity.Role;
@@ -89,6 +90,7 @@ public final class SpawnDirector {
     public static void stamp(Mob mob, double difficulty) {
         int tactics = Tactic.chooseFor(mob, difficulty, Role.NONE);
         MobData.set(mob, new MobData((float) difficulty, Role.NONE, MobData.NO_SQUAD, tactics));
+        IllagerIdentity.assignIfNeeded(mob, Role.NONE, difficulty);
         if (WarbandConfig.statBuffsEnabled) {
             applyStatBuffs(mob, difficulty);
         }
@@ -98,6 +100,7 @@ public final class SpawnDirector {
     public static void stamp(Mob mob, double difficulty, Role role, int squadId) {
         int tactics = Tactic.chooseFor(mob, difficulty, role);
         MobData.set(mob, new MobData((float) difficulty, role, squadId, tactics));
+        IllagerIdentity.assignIfNeeded(mob, role, difficulty);
         if (WarbandConfig.statBuffsEnabled) {
             applyStatBuffs(mob, difficulty);
         }
