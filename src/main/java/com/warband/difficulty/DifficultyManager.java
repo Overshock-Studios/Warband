@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -49,10 +50,22 @@ public final class DifficultyManager {
         if (WarbandConfig.factorVanillaDifficulty) {
             value = Math.max(value, level.getCurrentDifficultyAt(pos).getSpecialMultiplier());
         }
+        value = Math.max(value, dimensionFloor(level));
         if (WarbandConfig.respectGlobalDifficulty) {
             value *= globalCeiling(global);
         }
         return clamp01(value);
+    }
+
+    /** Per-dimension minimum difficulty — the Nether and End are inherently harsher. */
+    private static double dimensionFloor(ServerLevel level) {
+        if (level.dimension().equals(Level.NETHER)) {
+            return WarbandConfig.netherDifficultyFloor;
+        }
+        if (level.dimension().equals(Level.END)) {
+            return WarbandConfig.endDifficultyFloor;
+        }
+        return 0.0;
     }
 
     /** The raw scalar from the configured mode, before vanilla-difficulty adjustment. */

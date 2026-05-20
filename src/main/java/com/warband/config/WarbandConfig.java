@@ -34,12 +34,24 @@ public final class WarbandConfig {
     public static int deathReliefSeconds = 600;
     /** How much relief eases difficulty: 0.0 none .. 1.0 full calm. */
     public static double deathReliefStrength = 0.5;
+    /** SCORE mode: fraction of the gap the score decays toward gear each second. */
+    public static double scoreDecayRate = 0.005;
+    /** Minimum difficulty in the Nether, regardless of mode. */
+    public static double netherDifficultyFloor = 0.25;
+    /** Minimum difficulty in the End, regardless of mode. */
+    public static double endDifficultyFloor = 0.5;
 
     // ── Squads & spawning ───────────────────────────────────────────────────
     public static boolean squadsEnabled = true;
     public static int maxSquadSize = 6;
     /** Performance cap — most "smart AI" mobs ticked per player at once. */
     public static int maxSmartMobsPerPlayer = 24;
+    /** If true, spawned hostile mobs get difficulty-scaled stat buffs. */
+    public static boolean statBuffsEnabled = true;
+
+    // ── Display ─────────────────────────────────────────────────────────────
+    /** Client-side: show the difficulty-lens HUD readout. */
+    public static boolean hudEnabled = true;
 
     private static final Path CONFIG_PATH = Path.of("config", "warband.properties");
 
@@ -56,7 +68,7 @@ public final class WarbandConfig {
             }
         }
 
-        difficultyMode = DifficultyMode.fromString(props.getProperty("difficultyMode"), difficultyMode);
+        difficultyMode = parseMode(props, difficultyMode, logger);
         safeRadius = parseInt(props, "safeRadius", safeRadius, 0, 100_000, logger);
         maxDifficultyRadius = parseInt(props, "maxDifficultyRadius", maxDifficultyRadius, 1, 1_000_000, logger);
         maxDifficultyDays = parseInt(props, "maxDifficultyDays", maxDifficultyDays, 1, 100_000, logger);
@@ -64,10 +76,15 @@ public final class WarbandConfig {
         factorVanillaDifficulty = parseBoolean(props, "factorVanillaDifficulty", factorVanillaDifficulty, logger);
         deathReliefSeconds = parseInt(props, "deathReliefSeconds", deathReliefSeconds, 0, 100_000, logger);
         deathReliefStrength = parseDouble(props, "deathReliefStrength", deathReliefStrength, 0.0, 1.0, logger);
+        scoreDecayRate = parseDouble(props, "scoreDecayRate", scoreDecayRate, 0.0, 1.0, logger);
+        netherDifficultyFloor = parseDouble(props, "netherDifficultyFloor", netherDifficultyFloor, 0.0, 1.0, logger);
+        endDifficultyFloor = parseDouble(props, "endDifficultyFloor", endDifficultyFloor, 0.0, 1.0, logger);
 
         squadsEnabled = parseBoolean(props, "squadsEnabled", squadsEnabled, logger);
         maxSquadSize = parseInt(props, "maxSquadSize", maxSquadSize, 1, 64, logger);
         maxSmartMobsPerPlayer = parseInt(props, "maxSmartMobsPerPlayer", maxSmartMobsPerPlayer, 1, 512, logger);
+        statBuffsEnabled = parseBoolean(props, "statBuffsEnabled", statBuffsEnabled, logger);
+        hudEnabled = parseBoolean(props, "hudEnabled", hudEnabled, logger);
 
         save(logger);
         logger.info("[Warband] Config loaded");
@@ -104,6 +121,12 @@ public final class WarbandConfig {
                 deathReliefSeconds=%d
                 # How much a death eases difficulty: 0.0 none .. 1.0 full calm.
                 deathReliefStrength=%s
+                # SCORE mode: fraction of the gap the score decays toward gear each second.
+                scoreDecayRate=%s
+                # Minimum difficulty in the Nether, regardless of mode.
+                netherDifficultyFloor=%s
+                # Minimum difficulty in the End, regardless of mode.
+                endDifficultyFloor=%s
 
                 # ── Squads & spawning ─────────────────────────────────────────────
                 # If true, mobs may spawn as role-based squads at higher difficulty.
@@ -112,6 +135,12 @@ public final class WarbandConfig {
                 maxSquadSize=%d
                 # Performance cap: most tactical-AI mobs ticked per player at once.
                 maxSmartMobsPerPlayer=%d
+                # If true, spawned hostile mobs get difficulty-scaled stat buffs.
+                statBuffsEnabled=%s
+
+                # ── Display ───────────────────────────────────────────────────────
+                # Client-side: show the difficulty-lens HUD readout.
+                hudEnabled=%s
                 """.formatted(
                     difficultyMode,
                     safeRadius,
@@ -121,9 +150,14 @@ public final class WarbandConfig {
                     factorVanillaDifficulty,
                     deathReliefSeconds,
                     deathReliefStrength,
+                    scoreDecayRate,
+                    netherDifficultyFloor,
+                    endDifficultyFloor,
                     squadsEnabled,
                     maxSquadSize,
-                    maxSmartMobsPerPlayer
+                    maxSmartMobsPerPlayer,
+                    statBuffsEnabled,
+                    hudEnabled
                 );
     }
 
@@ -135,6 +169,17 @@ public final class WarbandConfig {
         if (s.equals("false")) return false;
         logger.warn("[Warband] '{}' is not a valid boolean ('{}'), using default {}", key, raw, def);
         return def;
+    }
+
+    private static DifficultyMode parseMode(Properties props, DifficultyMode def, Logger logger) {
+        String raw = props.getProperty("difficultyMode");
+        if (raw == null) return def;
+        DifficultyMode parsed = DifficultyMode.fromString(raw, null);
+        if (parsed == null) {
+            logger.warn("[Warband] 'difficultyMode' is not a valid mode ('{}'), using default {}", raw, def);
+            return def;
+        }
+        return parsed;
     }
 
     private static double parseDouble(Properties props, String key, double def, double min, double max, Logger logger) {

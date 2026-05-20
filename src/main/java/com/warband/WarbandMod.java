@@ -4,7 +4,10 @@ import com.warband.command.WarbandCommand;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.PlayerScore;
 import com.warband.entity.WarbandAttachments;
+import com.warband.net.DifficultyLensPayload;
+import com.warband.net.DifficultyLensSync;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +33,10 @@ public final class WarbandMod implements ModInitializer {
         PlayerScore.register();
         WarbandCommand.register();
 
-        // TODO: register the spawn director and squad coordinator here.
+        PayloadTypeRegistry.clientboundPlay().register(DifficultyLensPayload.TYPE, DifficultyLensPayload.CODEC);
+        DifficultyLensSync.register();
+
+        // TODO: register the squad coordinator here.
 
         LOGGER.info("[Warband] initialized");
     }

@@ -1,5 +1,6 @@
 package com.warband.entity;
 
+import com.mojang.serialization.Codec;
 import com.warband.WarbandMod;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
@@ -21,6 +22,17 @@ public final class WarbandAttachments {
     public static final AttachmentType<MobData> MOB_DATA = AttachmentRegistry.create(
             Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "mob_data"),
             builder -> builder.persistent(MobData.CODEC)
+    );
+
+    /**
+     * On a player: their capability score ({@code 0.0..1.0}) — the input to
+     * SCORE-mode difficulty. Ratchets up instantly, decays down slowly; see
+     * {@code com.warband.difficulty.PlayerScore}. Persistent and copied across
+     * death so difficulty stays consistent session to session.
+     */
+    public static final AttachmentType<Float> PLAYER_SCORE = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "player_score"),
+            builder -> builder.persistent(Codec.FLOAT).copyOnDeath()
     );
 
     /**
