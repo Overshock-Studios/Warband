@@ -1,10 +1,12 @@
 package com.warband.spawn;
 
 import com.warband.WarbandMod;
+import com.warband.ai.SquadCoordinator;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.entity.MobData;
 import com.warband.entity.Role;
+import com.warband.entity.Tactic;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -30,9 +32,8 @@ import java.util.EnumSet;
  * <p>Scope note: the "managed mob" set is {@link Enemy} (hostile mobs) — an
  * honest middle ground between a brittle explicit type list and "everything".
  *
- * <p>TODO (Phase 2b): wave/lull pacing — an L4D-style AI Director. The
- * {@code maxSmartMobsPerPlayer} cap is deferred to Phase 3, where tactical-AI
- * mobs (squads) actually exist; stamping and stat buffs are unbounded and cheap.
+ * <p>TODO (Phase 2b): wave/lull pacing — an L4D-style AI Director. Tactical
+ * squad assignment is Phase 3 and is delegated to {@link SquadCoordinator}.
  */
 public final class SpawnDirector {
 
@@ -69,13 +70,16 @@ public final class SpawnDirector {
     public static void onMobFinalizeSpawn(Mob mob, ServerLevelAccessor accessor, EntitySpawnReason reason) {
         if (!(mob instanceof Enemy)) return;
         if (!WORLD_SPAWNS.contains(reason)) return;
+        if (SquadCoordinator.isSpawningSquadmate()) return;
         if (MobData.isStamped(mob)) return;
 
         ServerLevel level = accessor.getLevel();
         double difficulty = DifficultyManager.getDifficulty(level, mob.blockPosition());
         if (difficulty <= 0.0) return;
 
-        stamp(mob, difficulty);
+        if (!SquadCoordinator.assignNaturalSpawn(mob, difficulty)) {
+            stamp(mob, difficulty);
+        }
     }
 
     /**
@@ -83,7 +87,17 @@ public final class SpawnDirector {
      * natural-spawn path and by {@code /warband debug spawn}.
      */
     public static void stamp(Mob mob, double difficulty) {
-        MobData.set(mob, new MobData((float) difficulty, Role.NONE, MobData.NO_SQUAD));
+        int tactics = Tactic.chooseFor(mob, difficulty, Role.NONE);
+        MobData.set(mob, new MobData((float) difficulty, Role.NONE, MobData.NO_SQUAD, tactics));
+        if (WarbandConfig.statBuffsEnabled) {
+            applyStatBuffs(mob, difficulty);
+        }
+    }
+
+    /** Stamp a mob with explicit squad metadata. */
+    public static void stamp(Mob mob, double difficulty, Role role, int squadId) {
+        int tactics = Tactic.chooseFor(mob, difficulty, role);
+        MobData.set(mob, new MobData((float) difficulty, role, squadId, tactics));
         if (WarbandConfig.statBuffsEnabled) {
             applyStatBuffs(mob, difficulty);
         }

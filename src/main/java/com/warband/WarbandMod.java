@@ -1,6 +1,9 @@
 package com.warband;
 
+import com.warband.ally.GolemDirector;
 import com.warband.command.WarbandCommand;
+import com.warband.ai.SquadCoordinator;
+import com.warband.ai.TemporaryTacticBlocks;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.PlayerScore;
 import com.warband.entity.WarbandAttachments;
@@ -32,11 +35,12 @@ public final class WarbandMod implements ModInitializer {
         WarbandAttachments.init();
         PlayerScore.register();
         WarbandCommand.register();
+        TemporaryTacticBlocks.register();
+        SquadCoordinator.register();
+        GolemDirector.register();
 
         PayloadTypeRegistry.clientboundPlay().register(DifficultyLensPayload.TYPE, DifficultyLensPayload.CODEC);
         DifficultyLensSync.register();
-
-        // TODO: register the squad coordinator here.
 
         LOGGER.info("[Warband] initialized");
     }

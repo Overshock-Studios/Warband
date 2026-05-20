@@ -2,6 +2,8 @@ package com.warband.command;
 
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.warband.ai.Squad;
+import com.warband.ai.SquadCoordinator;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.entity.MobData;
@@ -46,7 +48,10 @@ public final class WarbandCommand {
                                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                                 .then(Commands.literal("spawn")
                                         .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
-                                                .executes(WarbandCommand::debugSpawn))))));
+                                                .executes(WarbandCommand::debugSpawn)))
+                                .then(Commands.literal("squad")
+                                        .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
+                                                .executes(WarbandCommand::debugSquad))))));
     }
 
     private static int reportDifficulty(CommandContext<CommandSourceStack> ctx) {
@@ -92,6 +97,21 @@ public final class WarbandCommand {
         return 1;
     }
 
+    /** Spawns a small zombie squad at the source position, stamped with roles. */
+    private static int debugSquad(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        double difficulty = DoubleArgumentType.getDouble(ctx, "difficulty");
+        ServerLevel level = source.getLevel();
+        BlockPos pos = BlockPos.containing(source.getPosition());
+
+        Squad squad = SquadCoordinator.createDebugSquad(level, pos, difficulty);
+        int count = squad.members().size();
+        source.sendSuccess(() -> Component.literal(String.format(
+                "[Warband] Spawned squad %d with %d mob(s) at difficulty %.2f",
+                squad.id(), count, difficulty)), false);
+        return count;
+    }
+
     /** Reports Warband-stamped mobs within {@link #MOB_SCAN_SIZE} blocks. */
     private static int reportMobs(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
@@ -108,20 +128,27 @@ public final class WarbandCommand {
         double min = 1.0;
         double max = 0.0;
         double sum = 0.0;
+        int squadded = 0;
         for (Mob mob : stamped) {
-            double d = MobData.get(mob).difficulty();
+            MobData data = MobData.get(mob);
+            double d = data.difficulty();
             min = Math.min(min, d);
             max = Math.max(max, d);
             sum += d;
+            if (data.inSquad()) {
+                squadded++;
+            }
         }
         double avg = sum / stamped.size();
 
         int count = stamped.size();
         double fMin = min;
         double fMax = max;
+        int fSquadded = squadded;
+        int activeSquads = SquadCoordinator.activeSquads();
         source.sendSuccess(() -> Component.literal(String.format(
-                "[Warband] %d stamped mob(s) nearby — difficulty min %.2f / avg %.2f / max %.2f",
-                count, fMin, avg, fMax)), false);
+                "[Warband] %d stamped mob(s) nearby — %d in squads, %d active squad(s) — difficulty min %.2f / avg %.2f / max %.2f",
+                count, fSquadded, activeSquads, fMin, avg, fMax)), false);
         return count;
     }
 }

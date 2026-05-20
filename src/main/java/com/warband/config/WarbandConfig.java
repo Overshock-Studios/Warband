@@ -48,6 +48,8 @@ public final class WarbandConfig {
     public static int maxSmartMobsPerPlayer = 24;
     /** If true, spawned hostile mobs get difficulty-scaled stat buffs. */
     public static boolean statBuffsEnabled = true;
+    /** If true, situational tactics may place short-lived blocks like cobwebs/ice. */
+    public static boolean temporaryTacticBlocks = true;
 
     // ── Display ─────────────────────────────────────────────────────────────
     /** Client-side: show the difficulty-lens HUD readout. */
@@ -84,6 +86,7 @@ public final class WarbandConfig {
         maxSquadSize = parseInt(props, "maxSquadSize", maxSquadSize, 1, 64, logger);
         maxSmartMobsPerPlayer = parseInt(props, "maxSmartMobsPerPlayer", maxSmartMobsPerPlayer, 1, 512, logger);
         statBuffsEnabled = parseBoolean(props, "statBuffsEnabled", statBuffsEnabled, logger);
+        temporaryTacticBlocks = parseBoolean(props, "temporaryTacticBlocks", temporaryTacticBlocks, logger);
         hudEnabled = parseBoolean(props, "hudEnabled", hudEnabled, logger);
 
         save(logger);
@@ -127,7 +130,6 @@ public final class WarbandConfig {
                 netherDifficultyFloor=%s
                 # Minimum difficulty in the End, regardless of mode.
                 endDifficultyFloor=%s
-
                 # ── Squads & spawning ─────────────────────────────────────────────
                 # If true, mobs may spawn as role-based squads at higher difficulty.
                 squadsEnabled=%s
@@ -137,6 +139,8 @@ public final class WarbandConfig {
                 maxSmartMobsPerPlayer=%d
                 # If true, spawned hostile mobs get difficulty-scaled stat buffs.
                 statBuffsEnabled=%s
+                # If true, smarter mobs may place short-lived tactical blocks like cobwebs or ice.
+                temporaryTacticBlocks=%s
 
                 # ── Display ───────────────────────────────────────────────────────
                 # Client-side: show the difficulty-lens HUD readout.
@@ -157,6 +161,7 @@ public final class WarbandConfig {
                     maxSquadSize,
                     maxSmartMobsPerPlayer,
                     statBuffsEnabled,
+                    temporaryTacticBlocks,
                     hudEnabled
                 );
     }

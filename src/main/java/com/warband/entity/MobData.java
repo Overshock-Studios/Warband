@@ -14,20 +14,26 @@ import net.minecraft.world.entity.Entity;
  * @param difficulty the normalized {@code 0.0..1.0} difficulty at spawn
  * @param role       the mob's tactical role, or {@link Role#NONE} if unsquadded
  * @param squadId    the owning squad's id, or {@link #NO_SQUAD}
+ * @param tactics    bitmask of assigned {@link Tactic}s
  */
-public record MobData(float difficulty, Role role, int squadId) {
+public record MobData(float difficulty, Role role, int squadId, int tactics) {
 
     /** Sentinel {@link #squadId} for a mob that belongs to no squad. */
     public static final int NO_SQUAD = -1;
 
     /** Value returned for an unstamped mob — vanilla-calm, no squad. */
-    public static final MobData DEFAULT = new MobData(0.0f, Role.NONE, NO_SQUAD);
+    public static final MobData DEFAULT = new MobData(0.0f, Role.NONE, NO_SQUAD, 0);
 
     public static final Codec<MobData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.FLOAT.fieldOf("difficulty").forGetter(MobData::difficulty),
             Role.CODEC.fieldOf("role").forGetter(MobData::role),
-            Codec.INT.fieldOf("squadId").forGetter(MobData::squadId)
+            Codec.INT.fieldOf("squadId").forGetter(MobData::squadId),
+            Codec.INT.optionalFieldOf("tactics", 0).forGetter(MobData::tactics)
     ).apply(instance, MobData::new));
+
+    public MobData(float difficulty, Role role, int squadId) {
+        this(difficulty, role, squadId, 0);
+    }
 
     /** This mob's data, or {@link #DEFAULT} if it was never stamped by Warband. */
     public static MobData get(Entity entity) {
@@ -47,5 +53,9 @@ public record MobData(float difficulty, Role role, int squadId) {
 
     public boolean inSquad() {
         return squadId != NO_SQUAD;
+    }
+
+    public boolean hasTactic(Tactic tactic) {
+        return Tactic.has(tactics, tactic);
     }
 }

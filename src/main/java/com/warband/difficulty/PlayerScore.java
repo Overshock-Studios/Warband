@@ -5,8 +5,10 @@ import com.warband.entity.WarbandAttachments;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Per-player capability score — the input to {@link DifficultyMode#SCORE}.
@@ -33,10 +35,11 @@ import net.minecraft.world.entity.player.Player;
  */
 public final class PlayerScore {
 
-    // Reference maxima for a fully netherite-geared player.
+    // Reference maxima for a fully geared and meaningfully enchanted player.
     private static final double ARMOR_MAX = 20.0;
     private static final double TOUGHNESS_MAX = 12.0;
     private static final double ATTACK_SPAN = 8.0; // damage above the unarmed base of 1.0
+    private static final double ENCHANTMENT_LEVEL_MAX = 32.0;
 
     /** How often the stored score is re-evaluated, in ticks. */
     private static final int UPDATE_INTERVAL_TICKS = 20;
@@ -98,7 +101,25 @@ public final class PlayerScore {
         double armor = clamp01(player.getAttributeValue(Attributes.ARMOR) / ARMOR_MAX);
         double toughness = clamp01(player.getAttributeValue(Attributes.ARMOR_TOUGHNESS) / TOUGHNESS_MAX);
         double attack = clamp01((player.getAttributeValue(Attributes.ATTACK_DAMAGE) - 1.0) / ATTACK_SPAN);
-        return clamp01(0.45 * armor + 0.20 * toughness + 0.35 * attack);
+        double enchantments = enchantmentScore(player);
+        return clamp01(0.35 * armor + 0.15 * toughness + 0.25 * attack + 0.25 * enchantments);
+    }
+
+    private static double enchantmentScore(Player player) {
+        int levels = 0;
+        levels += enchantmentLevels(player.getMainHandItem());
+        levels += enchantmentLevels(player.getItemBySlot(EquipmentSlot.HEAD));
+        levels += enchantmentLevels(player.getItemBySlot(EquipmentSlot.CHEST));
+        levels += enchantmentLevels(player.getItemBySlot(EquipmentSlot.LEGS));
+        levels += enchantmentLevels(player.getItemBySlot(EquipmentSlot.FEET));
+        return clamp01(levels / ENCHANTMENT_LEVEL_MAX);
+    }
+
+    private static int enchantmentLevels(ItemStack stack) {
+        if (stack.isEmpty() || !stack.isEnchanted()) return 0;
+        return stack.getEnchantments().entrySet().stream()
+                .mapToInt(entry -> entry.getIntValue())
+                .sum();
     }
 
     private static double clamp01(double v) {
