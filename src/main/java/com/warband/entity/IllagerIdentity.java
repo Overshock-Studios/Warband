@@ -1,8 +1,8 @@
 package com.warband.entity;
 
+import com.warband.compat.IllagerInvasionCompat;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.monster.illager.AbstractIllager;
 
 /** Assigns stable rank-style names to Warband illagers. */
 public final class IllagerIdentity {
@@ -17,9 +17,13 @@ public final class IllagerIdentity {
     }
 
     public static void assignIfNeeded(Mob mob, Role role, double difficulty) {
-        if (!(mob instanceof AbstractIllager) || mob.hasCustomName()) return;
+        if (!IllagerInvasionCompat.isIllagerLike(mob) || mob.hasCustomName()) return;
 
         String rank = rank(role, difficulty);
+        String title = IllagerInvasionCompat.roleTitle(mob);
+        if (!title.isEmpty() && role != Role.LEADER) {
+            rank = title;
+        }
         String name = NAMES[Math.floorMod(mob.getUUID().hashCode(), NAMES.length)];
         mob.setCustomName(Component.literal(rank + " " + name));
         mob.setCustomNameVisible(difficulty >= 0.65 || role == Role.LEADER);

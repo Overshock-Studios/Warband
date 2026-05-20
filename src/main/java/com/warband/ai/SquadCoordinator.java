@@ -25,6 +25,7 @@ import com.warband.ai.goal.WaterCommitGoal;
 import com.warband.ai.goal.WarbandGoal;
 import com.warband.ai.goal.WitchSupportGoal;
 import com.warband.ai.goal.ZombieHordeGoal;
+import com.warband.compat.IllagerInvasionCompat;
 import com.warband.config.WarbandConfig;
 import com.warband.entity.MobData;
 import com.warband.entity.Role;
@@ -47,7 +48,6 @@ import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
-import net.minecraft.world.entity.monster.illager.AbstractIllager;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.monster.spider.Spider;
@@ -319,7 +319,10 @@ public final class SquadCoordinator {
 
     private static Role chooseRole(Mob mob, int index, double difficulty) {
         if (index == 0 && difficulty >= 0.45) return Role.LEADER;
+        if (IllagerInvasionCompat.isSupport(mob)) return Role.SUPPORT;
+        if (IllagerInvasionCompat.isSkirmisher(mob)) return Role.SKIRMISHER;
         if (mob instanceof RangedAttackMob) return Role.MARKSMAN;
+        if (IllagerInvasionCompat.isBruiser(mob)) return Role.BRUISER;
         if (difficulty >= 0.55 && index % 3 == 2) return Role.SKIRMISHER;
         return Role.BRUISER;
     }
@@ -343,7 +346,7 @@ public final class SquadCoordinator {
                 || mob instanceof MagmaCube
                 || mob instanceof Hoglin
                 || mob instanceof Zoglin
-                || mob instanceof AbstractIllager
+                || IllagerInvasionCompat.isIllagerLike(mob)
                 || mob instanceof Phantom;
     }
 
@@ -356,7 +359,7 @@ public final class SquadCoordinator {
                 || mob instanceof AbstractPiglin
                 || mob instanceof Hoglin
                 || mob instanceof Zoglin
-                || mob instanceof AbstractIllager;
+                || IllagerInvasionCompat.isIllagerLike(mob);
     }
 
     private static boolean shouldJoinExisting(Mob mob, double difficulty) {
@@ -372,7 +375,7 @@ public final class SquadCoordinator {
                 || mob instanceof AbstractPiglin
                 || mob instanceof Hoglin
                 || mob instanceof Zoglin
-                || mob instanceof AbstractIllager;
+                || IllagerInvasionCompat.isIllagerLike(mob);
     }
 
     private static boolean canRecruitBackup(Squad squad, Mob candidate) {
@@ -397,8 +400,8 @@ public final class SquadCoordinator {
         if (a instanceof Hoglin || a instanceof Zoglin || b instanceof Hoglin || b instanceof Zoglin) {
             return (a instanceof Hoglin || a instanceof Zoglin) && (b instanceof Hoglin || b instanceof Zoglin);
         }
-        if (a instanceof AbstractIllager || b instanceof AbstractIllager) {
-            return a instanceof AbstractIllager && b instanceof AbstractIllager;
+        if (IllagerInvasionCompat.isIllagerLike(a) || IllagerInvasionCompat.isIllagerLike(b)) {
+            return IllagerInvasionCompat.isIllagerLike(a) && IllagerInvasionCompat.isIllagerLike(b);
         }
         return a.getType() == b.getType();
     }

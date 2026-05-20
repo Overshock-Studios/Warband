@@ -1,5 +1,6 @@
 package com.warband.entity;
 
+import com.warband.compat.IllagerInvasionCompat;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.EnderMan;
@@ -10,7 +11,6 @@ import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
-import net.minecraft.world.entity.monster.illager.AbstractIllager;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.monster.skeleton.Stray;
 import net.minecraft.world.entity.monster.spider.Spider;
@@ -96,7 +96,7 @@ public enum Tactic {
         if ((mob instanceof Hoglin || mob instanceof Zoglin) && difficulty >= 0.45) {
             mask |= HOGLIN_STAMPEDE.bit;
         }
-        if (mob instanceof AbstractIllager && difficulty >= 0.45) {
+        if (IllagerInvasionCompat.isIllagerLike(mob) && difficulty >= 0.45) {
             mask |= ILLAGER_COMMAND.bit | PRESSURE_UNREACHABLE.bit;
         }
         if (mob instanceof Phantom && difficulty >= 0.45) {
