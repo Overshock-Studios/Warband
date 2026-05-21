@@ -1,58 +1,61 @@
 # Warband
 
-**A mob AI and spawning overhaul where the world fights back with its head, not just its health bar.**
+**A mob AI and spawning overhaul where the world fights back with strategy.**
 
-Near world spawn, Minecraft stays the game you know. The further you push out — or the better-geared you get — the deadlier it becomes. But "deadlier" here doesn't mean bullet-sponge mobs with inflated stats. It means mobs that **think**.
+Regions learn the power of players who spend time there, the world gets deadlier. But "deadlier" here doesn't mean bullet-sponge mobs with inflated stats. It means mobs that **think**.
 
-> Other difficulty mods make mobs *stronger*. Warband makes them *smarter*.
+> Other difficulty mods only make mobs *stronger*. Warband makes them *smarter*.
 
-## Smarter, not spongier
+## Smarter, Not Spongier
 
-Stat buffs in Warband are deliberately small — just enough to keep clever mobs relevant. The real threat is **coordination**:
+Stat buffs in Warband are deliberately small - just enough to keep clever mobs relevant. The real threat is **coordination**:
 
-- **Squads with roles.** Mobs spawn as groups — Bruisers that close, Skirmishers that kite, Marksmen that seek elevation, Support that heals, and a Leader whose death breaks the squad's morale.
-- **Real tactics.** They flank, break line of sight around terrain, fall back to a last-known position when they lose you, regroup, and call measured reinforcements.
-- **Smart, not omniscient.** Mobs act on what they could plausibly know — sight, sound, squadmate reports. No x-ray targeting. When you lose them, they search where they *last saw you* — so you can still outplay them.
-- **Honest retreat.** Genuinely dangerous mobs pull back when wounded — but on a leash, so they commit instead of fleeing forever. Mindless mobs still charge to the death; cowardice is earned.
+- **Squads with internal roles:** Mobs spawn as groups - Bruisers that close, Skirmishers that kite, Marksmen that seek elevation, Support that heals, and a Leader whose death breaks the squad's morale.
+- **Real tactics:** They flank, break line of sight around terrain, search last-known positions when they lose you, regroup, pressure unreachable players, and call measured reinforcements.
+- **Smart awareness:** Mobs act on what they could plausibly know - sight, sound, squadmate reports. If they lose track of you, they search your *last known position* so you can still outplay them.
 
-Every mob family brings its own trick: spider webs and sticky ground, skeleton smoke screens, creepers that stalk from the flank, zombie hordes that surround, blazes that hold the high air, witches that support the line, hoglin stampedes, phantom harassment, and more.
+Every mob family brings its own trick: spider webs and sticky ground, skeleton smoke screens, creepers that stalk from the flank, zombie hordes that surround, blazes that hold the high air, witches that support the line, piglin morale, hoglin stampedes, phantom harassment, guardian and shulker pressure, ravager charges, warden discipline, and more.
 
-## A difficulty that makes sense
+## The Illager War
+
+Illagers are no longer a loose scatter of mobs - they're **factions**. Five of them, each with its own doctrine, banners, named ranks, and rivals.
+
+- **Strongholds.** Woodland mansions and pillager outposts are faction seats. A mansion is a single faction's capital, defended by an elevated garrison and commanded by one **Warmarshal** - a named apex boss who is the *smartest* illager in the building, directing the fight from behind his line.
+- **Grudges.** Wound a notable illager and let it live, and it remembers. It musters its faction and comes back for you - returning to the very place it happened.
+- **Bounty hunters.** Anger a faction enough and it puts a price on you: a relentless elite enforcer picks up your trail.
+- **Rivalries.** A revenge patrol can be intercepted by a rival faction - a three-way fight you can turn to your advantage.
+
+
+## Difficulty
 
 One difficulty scalar drives everything, and you choose how it's derived:
 
-- **Regional** (default) — difficulty follows a running memory of player capability, learned per-region. Your well-trodden areas grow dangerous; the wilds you never touched stay wild. **More players in an area raises the threat** — a group faces a real warband.
-- **Distance** — classic: the further from world spawn, the harder.
+- **Regional** (default) - Difficulty follows a running memory of player capability in chunks, backed by vanilla regional difficulty. More players in an area raises the threat.
+- **Distance** - classic: the further from world spawn, the harder.
 
-Warband always respects your vanilla difficulty setting (Peaceful turns it off entirely; Easy and Normal lower its ceiling), eases off briefly after a death, and treats the Nether and End as inherently harsher.
-
-## The illager war
-
-Illagers are no longer a loose scatter of mobs — they're **factions**. Five of them, each with its own doctrine, banners, named ranks, and rivals.
-
-- **Strongholds.** Woodland mansions and pillager outposts are faction seats. A mansion is a single faction's capital, defended by an elevated garrison and commanded by one **Warmarshal** — a named apex boss who is the *smartest* illager in the building, directing the fight from behind his line.
-- **Grudges.** Wound a notable illager and let it live, and it remembers. It musters its faction and comes back for you — returning to the very place it happened.
-- **Bounty hunters.** Anger a faction enough and it puts a price on you: a relentless elite enforcer picks up your trail.
-- **Rivalries.** A revenge patrol can be intercepted by a rival faction — a three-way fight you can turn to your advantage.
+Warband respects your vanilla difficulty setting (Peaceful turns it off entirely; Easy and Normal lower its ceiling), can optionally ease off after death, and treats the Nether and End as inherently harsher.
 
 ## The world isn't helpless
 
-Iron golems get a support upgrade so villages can actually stand against smarter raiders, and goat horns can rally golems and disrupt illager squads.
+Iron golems receive a support upgrade so villages can actually stand against coordinated raiders. Players can also use goat horns to rally golems and disrupt illager squads.
 
-## The Difficulty Lens
+## Bosses, Farms, and Intel
 
-A compact HUD readout shows your local **Difficulty** and your own **Power**, so the threat around you is always legible — you can see why a fight went the way it did.
+The Wither and Ender Dragon gain Warband phase abilities, warning effects, and late-fight pressure so boss fights are less passive. Obvious mob-farm conditions trigger anti-farm behavior: trapped crowds try to escape, then stop paying loot and XP if the farm remains abusive.
+
+Warband is server-side. Use `/warband difficulty`, `/warband region`, `/warband mobs`, and `/warband intel` to inspect local threat, the regional difficulty map, stamped mobs, and illager faction state. OP debug tools can spawn test mobs, squads, and revenge parties.
 
 ## Compatibility
 
-- **Illager Invasion** — soft, automatic support; its illagers join the faction system.
-- **Structure mods** — mansions and outposts are detected by structure *tag*, so any mod's pillager strongholds can opt in.
-- Add it to an existing world freely. Fabric API is the only dependency.
+**Required**: Fabric API. Warband is server-side and can be freely added to an existing world.
+- **Illager Invasion** - soft, automatic support; its illagers join the faction system.
+- **Structure mods** - mansions and outposts are detected by structure *tag*, so any mod's pillager strongholds can opt in.
+- **Ascendant Armory** - supported from the Ascension Armory side. Warband-stamped mobs can influence core drops when both mods are installed.
 
 ## Configuration
 
-Everything is tunable in `config/warband.properties` — difficulty mode and curves, squad sizes, stat-buff strength, encounter pacing, every illager subsystem, and the HUD.
+Everything is tunable in `config/warband.properties` - difficulty mode and curves, config profiles, squad sizes, stat-buff strength, encounter pacing, role visuals/names/cues, anti-farm tiers, XP scaling, boss abilities, extended mob tactics, goat horn behavior, and every illager subsystem.
 
 ---
 
-*MC 26.1.2 · Fabric. MIT licensed.*
+*MIT licensed.*

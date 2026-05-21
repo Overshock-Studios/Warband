@@ -87,6 +87,9 @@ public final class WarbandConfig {
     public static int antiFarmTier1Crowd = 8;
     public static int antiFarmTier2Crowd = 14;
     public static int antiFarmTier3Crowd = 22;
+    public static boolean experienceScalingEnabled = true;
+    public static double experienceDifficultyBonusMax = 0.35;
+    public static double experienceLeaderBonus = 0.15;
     public static boolean bossAbilitiesEnabled = true;
     public static boolean extendedMobTacticsEnabled = true;
 
@@ -175,6 +178,9 @@ public final class WarbandConfig {
         antiFarmTier1Crowd = parseInt(props, "antiFarmTier1Crowd", antiFarmTier1Crowd, 3, 128, logger);
         antiFarmTier2Crowd = parseInt(props, "antiFarmTier2Crowd", antiFarmTier2Crowd, 3, 128, logger);
         antiFarmTier3Crowd = parseInt(props, "antiFarmTier3Crowd", antiFarmTier3Crowd, 3, 128, logger);
+        experienceScalingEnabled = parseBoolean(props, "experienceScalingEnabled", experienceScalingEnabled, logger);
+        experienceDifficultyBonusMax = parseDouble(props, "experienceDifficultyBonusMax", experienceDifficultyBonusMax, 0.0, 5.0, logger);
+        experienceLeaderBonus = parseDouble(props, "experienceLeaderBonus", experienceLeaderBonus, 0.0, 5.0, logger);
         bossAbilitiesEnabled = parseBoolean(props, "bossAbilitiesEnabled", bossAbilitiesEnabled, logger);
         extendedMobTacticsEnabled = parseBoolean(props, "extendedMobTacticsEnabled", extendedMobTacticsEnabled, logger);
 
@@ -291,6 +297,11 @@ public final class WarbandConfig {
                 antiFarmTier1Crowd=%d
                 antiFarmTier2Crowd=%d
                 antiFarmTier3Crowd=%d
+                # If true, legitimate Warband-enhanced mobs grant modest extra XP.
+                # Farm-suppressed mobs still grant 0 XP.
+                experienceScalingEnabled=%s
+                experienceDifficultyBonusMax=%s
+                experienceLeaderBonus=%s
                 # If true, major bosses gain Warband phase abilities.
                 bossAbilitiesEnabled=%s
                 # If true, guardians, shulkers, ghasts, cave spiders, ravagers and wardens get Warband tactics.
@@ -373,6 +384,9 @@ public final class WarbandConfig {
                     antiFarmTier1Crowd,
                     antiFarmTier2Crowd,
                     antiFarmTier3Crowd,
+                    experienceScalingEnabled,
+                    experienceDifficultyBonusMax,
+                    experienceLeaderBonus,
                     bossAbilitiesEnabled,
                     extendedMobTacticsEnabled,
                     illagerFactionsEnabled,

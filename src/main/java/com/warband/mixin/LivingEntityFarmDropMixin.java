@@ -1,8 +1,12 @@
 package com.warband.mixin;
 
+import com.warband.config.WarbandConfig;
+import com.warband.entity.MobData;
 import com.warband.spawn.AntiFarmDirector;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,10 +27,27 @@ public abstract class LivingEntityFarmDropMixin {
     }
 
     @Inject(method = "getExperienceReward", at = @At("HEAD"), cancellable = true)
-    private void warband$suppressFarmExperience(ServerLevel level, net.minecraft.world.entity.Entity killer,
-                                                CallbackInfoReturnable<Integer> cir) {
+    private void warband$suppressFarmExperience(ServerLevel level, Entity killer, CallbackInfoReturnable<Integer> cir) {
         if ((Object) this instanceof Mob mob && AntiFarmDirector.isFarmSuppressed(mob)) {
             cir.setReturnValue(0);
         }
+    }
+
+    @Inject(method = "getExperienceReward", at = @At("RETURN"), cancellable = true)
+    private void warband$scaleLegitimateWarbandExperience(ServerLevel level, Entity killer,
+                                                          CallbackInfoReturnable<Integer> cir) {
+        if (!WarbandConfig.experienceScalingEnabled || !(killer instanceof ServerPlayer)) return;
+        if (!((Object) this instanceof Mob mob) || AntiFarmDirector.isFarmSuppressed(mob)) return;
+        if (!MobData.isStamped(mob)) return;
+
+        int base = cir.getReturnValue();
+        if (base <= 0) return;
+
+        MobData data = MobData.get(mob);
+        double multiplier = 1.0 + data.difficulty() * WarbandConfig.experienceDifficultyBonusMax;
+        if (data.role().isLeader()) {
+            multiplier += WarbandConfig.experienceLeaderBonus;
+        }
+        cir.setReturnValue(Math.max(base, (int) Math.round(base * multiplier)));
     }
 }
