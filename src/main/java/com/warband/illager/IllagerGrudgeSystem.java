@@ -257,6 +257,30 @@ public final class IllagerGrudgeSystem {
         return spawnRevengePatrol(player, List.of(grudge));
     }
 
+    public static List<String> intelLines(ServerPlayer player) {
+        List<String> lines = new ArrayList<>();
+        List<IllagerGrudge> grudges = grudges(player);
+        List<FactionReputation> reputations = reputations(player);
+        if (grudges.isEmpty() && reputations.isEmpty()) {
+            return List.of("No faction intel on you yet.");
+        }
+        if (!reputations.isEmpty()) {
+            lines.add("Faction heat:");
+            for (FactionReputation reputation : reputations) {
+                String posture = reputation.heat() >= BOUNTY_HEAT_THRESHOLD ? "bounty" : reputation.heat() >= 50 ? "hostile" : "watching";
+                lines.add("  " + reputation.faction().displayName() + ": " + reputation.heat() + " (" + posture + ")");
+            }
+        }
+        if (!grudges.isEmpty()) {
+            lines.add("Known survivors:");
+            for (IllagerGrudge grudge : grudges) {
+                lines.add("  " + grudge.survivorName() + " / " + grudge.faction().displayName()
+                        + " anger " + grudge.anger() + " attempts " + grudge.attempts());
+            }
+        }
+        return lines;
+    }
+
     private static boolean spawnRevengePatrol(ServerPlayer player, List<IllagerGrudge> grudges) {
         if (grudges.isEmpty()) return false;
         IllagerFaction faction = grudges.getFirst().faction();

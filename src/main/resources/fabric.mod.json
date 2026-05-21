@@ -13,9 +13,6 @@
   "entrypoints": {
     "main": [
       "com.warband.WarbandMod"
-    ],
-    "client": [
-      "com.warband.WarbandClient"
     ]
   },
   "mixins": [

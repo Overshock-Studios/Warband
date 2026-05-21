@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>The vanilla difficulty setting is always honored when
  * {@code respectGlobalDifficulty} is on: Peaceful forces {@code 0.0}, and
- * Easy/Normal lower the ceiling.
+ * Easy/Normal lower the base value before harsh dimension bonuses are applied.
  */
 public final class DifficultyManager {
 
@@ -46,20 +46,20 @@ public final class DifficultyManager {
         if (WarbandConfig.factorVanillaDifficulty) {
             value = Math.max(value, level.getCurrentDifficultyAt(pos).getSpecialMultiplier());
         }
-        value = Math.max(value, dimensionFloor(level));
         if (WarbandConfig.respectGlobalDifficulty) {
             value *= globalCeiling(global);
         }
+        value += dimensionBonus(level);
         return clamp01(value);
     }
 
-    /** Per-dimension minimum difficulty — the Nether and End are inherently harsher. */
-    private static double dimensionFloor(ServerLevel level) {
+    /** Per-dimension additive pressure — the Nether and End are inherently harsher. */
+    private static double dimensionBonus(ServerLevel level) {
         if (level.dimension().equals(Level.NETHER)) {
-            return WarbandConfig.netherDifficultyFloor;
+            return WarbandConfig.netherDifficultyBonus;
         }
         if (level.dimension().equals(Level.END)) {
-            return WarbandConfig.endDifficultyFloor;
+            return WarbandConfig.endDifficultyBonus;
         }
         return 0.0;
     }

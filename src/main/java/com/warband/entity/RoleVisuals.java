@@ -1,10 +1,12 @@
 package com.warband.entity;
 
 import com.warband.WarbandMod;
+import com.warband.ai.TacticalEffects;
 import com.warband.compat.IllagerInvasionCompat;
 import com.warband.config.WarbandConfig;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -28,8 +30,11 @@ public final class RoleVisuals {
     }
 
     public static void apply(Mob mob, Role role, double difficulty) {
-        if (!WarbandConfig.roleVisualsEnabled || role == Role.NONE) return;
+        if (role == Role.NONE) return;
 
+        applyRoleName(mob, role);
+        TacticalEffects.roleCue(mob, role);
+        if (!WarbandConfig.roleVisualsEnabled) return;
         applyScale(mob, role);
         if (IllagerInvasionCompat.isIllagerLike(mob) || difficulty < 0.35) return;
 
@@ -61,6 +66,23 @@ public final class RoleVisuals {
             case NONE -> {
             }
         }
+    }
+
+    private static void applyRoleName(Mob mob, Role role) {
+        if (!WarbandConfig.roleNamesEnabled || mob.hasCustomName() || IllagerInvasionCompat.isIllagerLike(mob)) return;
+        mob.setCustomName(Component.literal(displayName(role) + " " + mob.getType().getDescription().getString()));
+        mob.setCustomNameVisible(true);
+    }
+
+    private static String displayName(Role role) {
+        return switch (role) {
+            case BRUISER -> "Bruiser";
+            case SKIRMISHER -> "Flanker";
+            case MARKSMAN -> "Marksman";
+            case SUPPORT -> "Support";
+            case LEADER -> "Leader";
+            case NONE -> "";
+        };
     }
 
     private static void applyScale(Mob mob, Role role) {

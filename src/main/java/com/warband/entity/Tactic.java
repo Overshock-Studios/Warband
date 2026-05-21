@@ -5,14 +5,20 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.Blaze;
+import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.Phantom;
+import net.minecraft.world.entity.monster.Ravager;
+import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Witch;
+import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.monster.skeleton.Stray;
+import net.minecraft.world.entity.monster.spider.CaveSpider;
 import net.minecraft.world.entity.monster.spider.Spider;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.monster.zombie.Drowned;
@@ -39,7 +45,13 @@ public enum Tactic {
     ILLAGER_COMMAND(1 << 14),
     PHANTOM_HARASS(1 << 15),
     LEAP_UNREACHABLE(1 << 16),
-    MOB_STACK_CLIMB(1 << 17);
+    MOB_STACK_CLIMB(1 << 17),
+    GUARDIAN_SURGE(1 << 18),
+    SHULKER_LOCKDOWN(1 << 19),
+    GHAST_REPOSITION(1 << 20),
+    CAVE_SPIDER_AMBUSH(1 << 21),
+    RAVAGER_BREAKER(1 << 22),
+    WARDEN_PRESSURE(1 << 23);
 
     private final int bit;
 
@@ -60,6 +72,9 @@ public enum Tactic {
         if (mob instanceof Spider) {
             if (difficulty >= 0.45) mask |= SPIDER_WEB.bit;
             if (difficulty >= 0.65 || role == Role.SKIRMISHER) mask |= STICKY_PATH.bit;
+        }
+        if (mob instanceof CaveSpider && difficulty >= 0.45) {
+            mask |= CAVE_SPIDER_AMBUSH.bit | PRESSURE_UNREACHABLE.bit;
         }
         if (mob instanceof AbstractSkeleton) {
             if (difficulty >= 0.50) mask |= PRESSURE_UNREACHABLE.bit;
@@ -108,6 +123,21 @@ public enum Tactic {
         }
         if (mob instanceof Phantom && difficulty >= 0.45) {
             mask |= PHANTOM_HARASS.bit | PRESSURE_UNREACHABLE.bit;
+        }
+        if (mob instanceof Guardian && difficulty >= 0.45) {
+            mask |= GUARDIAN_SURGE.bit | PRESSURE_UNREACHABLE.bit;
+        }
+        if (mob instanceof Shulker && difficulty >= 0.50) {
+            mask |= SHULKER_LOCKDOWN.bit;
+        }
+        if (mob instanceof Ghast && difficulty >= 0.45) {
+            mask |= GHAST_REPOSITION.bit;
+        }
+        if (mob instanceof Ravager && difficulty >= 0.50) {
+            mask |= RAVAGER_BREAKER.bit | PRESSURE_UNREACHABLE.bit;
+        }
+        if (mob instanceof Warden && difficulty >= 0.35) {
+            mask |= WARDEN_PRESSURE.bit | PRESSURE_UNREACHABLE.bit;
         }
         return mask;
     }

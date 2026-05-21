@@ -39,6 +39,30 @@ public final class WarbandAttachments {
             builder -> builder.persistent(Codec.BOOL)
     );
 
+    /** Per-mob marker: trapped farm mobs stop paying out loot/XP and try to escape. */
+    public static final AttachmentType<Boolean> FARM_SUPPRESSED = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "farm_suppressed"),
+            builder -> builder.persistent(Codec.BOOL)
+    );
+
+    /** Per-mob anti-farm pressure tier: 0 none, 1 escape, 2 suppress loot, 3 enraged breakout. */
+    public static final AttachmentType<Integer> FARM_TIER = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "farm_tier"),
+            builder -> builder.persistent(Codec.INT)
+    );
+
+    /** Per-boss marker: one-shot Warband phase transition has fired. */
+    public static final AttachmentType<Boolean> BOSS_PHASE_TRIGGERED = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "boss_phase_triggered"),
+            builder -> builder.persistent(Codec.BOOL)
+    );
+
+    /** Per-boss marker: low-health last stand has fired. */
+    public static final AttachmentType<Boolean> BOSS_LAST_STAND_TRIGGERED = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "boss_last_stand_triggered"),
+            builder -> builder.persistent(Codec.BOOL)
+    );
+
     /** Per-mob marker: this illager is a mansion's Warmarshal. Killing it breaks the faction. */
     public static final AttachmentType<Boolean> WARMARSHAL = AttachmentRegistry.create(
             Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "warmarshal"),

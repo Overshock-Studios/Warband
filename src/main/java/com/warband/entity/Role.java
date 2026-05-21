@@ -42,4 +42,8 @@ public enum Role implements StringRepresentable {
     public String getSerializedName() {
         return serializedName;
     }
+
+    public boolean isLeader() {
+        return this == LEADER;
+    }
 }

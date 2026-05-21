@@ -2,6 +2,7 @@ package com.warband.ai;
 
 import com.warband.compat.IllagerInvasionCompat;
 import com.warband.entity.MobData;
+import com.warband.spawn.BossDirector;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,6 +29,11 @@ public final class FriendlyFireHandler {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
             Entity attacker = source.getEntity();
             if (!(entity instanceof Mob victim) || !(attacker instanceof Mob attackerMob)) return true;
+            if (BossDirector.isWitherMinionFriendly(victim, attackerMob)) {
+                victim.setTarget(null);
+                attackerMob.setTarget(null);
+                return false;
+            }
             if (!MobData.isStamped(victim) || !MobData.isStamped(attackerMob)) return true;
 
             if (sameSquad(victim, attackerMob) || sameWarbandFamily(victim, attackerMob)) {

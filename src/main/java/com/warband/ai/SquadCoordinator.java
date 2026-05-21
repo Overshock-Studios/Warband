@@ -5,6 +5,7 @@ import com.warband.ai.goal.BlazeHoverGoal;
 import com.warband.ai.goal.CallBackupGoal;
 import com.warband.ai.goal.CreeperStalkGoal;
 import com.warband.ai.goal.EndermanDisruptGoal;
+import com.warband.ai.goal.ExtendedMobTacticGoal;
 import com.warband.ai.goal.FlankGoal;
 import com.warband.ai.goal.FrostWalkerGoal;
 import com.warband.ai.goal.HoglinStampedeGoal;
@@ -44,15 +45,21 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.Phantom;
+import net.minecraft.world.entity.monster.Ravager;
+import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Witch;
+import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
+import net.minecraft.world.entity.monster.spider.CaveSpider;
 import net.minecraft.world.entity.monster.spider.Spider;
 import net.minecraft.world.entity.monster.zombie.Drowned;
 import net.minecraft.world.entity.monster.zombie.Zombie;
@@ -339,6 +346,15 @@ public final class SquadCoordinator {
         if (data.hasTactic(Tactic.PHANTOM_HARASS)) {
             accessor.warband$goalSelector().addGoal(3, new PhantomHarassGoal(mob, squad));
         }
+        if (WarbandConfig.extendedMobTacticsEnabled
+                && (data.hasTactic(Tactic.GUARDIAN_SURGE)
+                || data.hasTactic(Tactic.SHULKER_LOCKDOWN)
+                || data.hasTactic(Tactic.GHAST_REPOSITION)
+                || data.hasTactic(Tactic.CAVE_SPIDER_AMBUSH)
+                || data.hasTactic(Tactic.RAVAGER_BREAKER)
+                || data.hasTactic(Tactic.WARDEN_PRESSURE))) {
+            accessor.warband$goalSelector().addGoal(3, new ExtendedMobTacticGoal(mob, squad));
+        }
     }
 
     private static void spawnNaturalSquadmates(Squad squad, Mob anchor, double difficulty) {
@@ -425,7 +441,13 @@ public final class SquadCoordinator {
                 || mob instanceof Hoglin
                 || mob instanceof Zoglin
                 || IllagerInvasionCompat.isIllagerLike(mob)
-                || mob instanceof Phantom;
+                || mob instanceof Phantom
+                || mob instanceof Guardian
+                || mob instanceof Shulker
+                || mob instanceof Ghast
+                || mob instanceof CaveSpider
+                || mob instanceof Ravager
+                || mob instanceof Warden;
     }
 
     private static boolean formsNaturalSquads(Mob mob) {

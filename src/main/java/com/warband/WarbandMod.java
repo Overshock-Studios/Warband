@@ -12,16 +12,16 @@ import com.warband.entity.WarbandAttachments;
 import com.warband.illager.IllagerGrudgeSystem;
 import com.warband.illager.StrongholdGarrison;
 import com.warband.item.GoatHornCommand;
-import com.warband.net.DifficultyLensPayload;
-import com.warband.net.DifficultyLensSync;
+import com.warband.spawn.AntiFarmDirector;
+import com.warband.spawn.BossDirector;
 import com.warband.spawn.EncounterDirector;
+import com.warband.spawn.LootIntegration;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Common entrypoint — runs on both client and dedicated server.
+ * Common entrypoint — runs on dedicated servers and integrated servers.
  *
  * <p>Warband is a vanilla mob AI and spawning overhaul. The world is calm near
  * spawn and grows deadlier the further out you go (distance mode), or as the
@@ -44,15 +44,15 @@ public final class WarbandMod implements ModInitializer {
         WarbandCommand.register();
         TemporaryTacticBlocks.register();
         EncounterDirector.register();
+        AntiFarmDirector.register();
+        BossDirector.register();
+        LootIntegration.register();
         FriendlyFireHandler.register();
         GoatHornCommand.register();
         SquadCoordinator.register();
         GolemDirector.register();
         IllagerGrudgeSystem.register();
         StrongholdGarrison.register();
-
-        PayloadTypeRegistry.clientboundPlay().register(DifficultyLensPayload.TYPE, DifficultyLensPayload.CODEC);
-        DifficultyLensSync.register();
 
         LOGGER.info("[Warband] initialized");
     }

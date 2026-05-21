@@ -52,6 +52,33 @@ public final class RegionalDifficulty {
         return clamp01(best);
     }
 
+    public static String mapAround(ServerLevel level, BlockPos pos, int radiusChunks) {
+        Map<Long, Cell> cells = BY_DIMENSION.get(dimensionKey(level));
+        int centerX = pos.getX() >> 4;
+        int centerZ = pos.getZ() >> 4;
+        StringBuilder out = new StringBuilder();
+        for (int dz = -radiusChunks; dz <= radiusChunks; dz++) {
+            if (dz > -radiusChunks) out.append('\n');
+            for (int dx = -radiusChunks; dx <= radiusChunks; dx++) {
+                Cell cell = cells == null ? null : cells.get(chunkKey(centerX + dx, centerZ + dz));
+                out.append(cellSymbol(cell == null ? 0.0 : cell.value));
+            }
+        }
+        return out.toString();
+    }
+
+    public static int knownCells(ServerLevel level) {
+        Map<Long, Cell> cells = BY_DIMENSION.get(dimensionKey(level));
+        return cells == null ? 0 : cells.size();
+    }
+
+    public static double rawCellValue(ServerLevel level, BlockPos pos) {
+        Map<Long, Cell> cells = BY_DIMENSION.get(dimensionKey(level));
+        if (cells == null) return 0.0;
+        Cell cell = cells.get(chunkKey(pos.getX() >> 4, pos.getZ() >> 4));
+        return cell == null ? 0.0 : clamp01(cell.value);
+    }
+
     /**
      * Samples every online player into the chunk grid for one interval. Players
      * are pooled per cell so a group raises a region's difficulty above what any
@@ -89,9 +116,15 @@ public final class RegionalDifficulty {
             Map<Long, Cell> cells = BY_DIMENSION.computeIfAbsent(dimEntry.getKey(), ignored -> new HashMap<>());
             for (Map.Entry<Long, double[]> cellEntry : dimEntry.getValue().entrySet()) {
                 double target = groupTarget(cellEntry.getValue());
-                Cell cell = cells.getOrDefault(cellEntry.getKey(), new Cell(0.0, now));
-                double updated = cell.value + (target - cell.value) * WarbandConfig.regionalBlendRate;
-                cells.put(cellEntry.getKey(), new Cell(clamp01(updated), now));
+                Cell cell = cells.getOrDefault(cellEntry.getKey(), new Cell(0.0, now, 0));
+                int pressureSamples = now - cell.lastTouched <= SAMPLE_INTERVAL_TICKS * 2L
+                        ? cell.pressureSamples + 1
+                        : 1;
+                double acceleration = Math.min(WarbandConfig.regionalAccelerationMax,
+                        pressureSamples * WarbandConfig.regionalAccelerationPerSample);
+                double blend = clamp01(WarbandConfig.regionalBlendRate + acceleration);
+                double updated = cell.value + (target - cell.value) * blend;
+                cells.put(cellEntry.getKey(), new Cell(clamp01(updated), now, pressureSamples));
             }
         }
     }
@@ -115,7 +148,8 @@ public final class RegionalDifficulty {
                     continue;
                 }
                 if (now > cell.lastTouched) {
-                    entry.setValue(new Cell(cell.value * (1.0 - WarbandConfig.regionalDecayRate), cell.lastTouched));
+                    int pressureSamples = Math.max(0, cell.pressureSamples - 1);
+                    entry.setValue(new Cell(cell.value * (1.0 - WarbandConfig.regionalDecayRate), cell.lastTouched, pressureSamples));
                 }
             }
         }
@@ -133,6 +167,15 @@ public final class RegionalDifficulty {
         return Math.max(0.0, Math.min(1.0, v));
     }
 
-    private record Cell(double value, long lastTouched) {
+    private static char cellSymbol(double value) {
+        if (value < 0.05) return '.';
+        if (value < 0.25) return '1';
+        if (value < 0.50) return '2';
+        if (value < 0.75) return '3';
+        if (value < 0.95) return '4';
+        return '5';
+    }
+
+    private record Cell(double value, long lastTouched, int pressureSamples) {
     }
 }

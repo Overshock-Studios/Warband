@@ -6,6 +6,7 @@ import com.warband.ai.Squad;
 import com.warband.ai.SquadCoordinator;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.DifficultyManager;
+import com.warband.difficulty.RegionalDifficulty;
 import com.warband.entity.MobData;
 import com.warband.entity.WarbandAttachments;
 import com.warband.illager.IllagerGrudgeSystem;
@@ -45,6 +46,10 @@ public final class WarbandCommand {
                                 .executes(WarbandCommand::reportDifficulty))
                         .then(Commands.literal("mobs")
                                 .executes(WarbandCommand::reportMobs))
+                        .then(Commands.literal("region")
+                                .executes(WarbandCommand::reportRegion))
+                        .then(Commands.literal("intel")
+                                .executes(WarbandCommand::reportIntel))
                         .then(Commands.literal("debug")
                                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                                 .then(Commands.literal("spawn")
@@ -56,6 +61,36 @@ public final class WarbandCommand {
                                 .then(Commands.literal("revenge")
                                         .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
                                                 .executes(WarbandCommand::debugRevenge))))));
+    }
+
+    private static int reportRegion(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerLevel level = source.getLevel();
+        BlockPos pos = BlockPos.containing(source.getPosition());
+        double raw = RegionalDifficulty.rawCellValue(level, pos);
+        double finalDifficulty = DifficultyManager.getDifficulty(level, pos, source.getPlayer());
+        source.sendSuccess(() -> Component.literal(String.format(
+                "[Warband] Regional cell raw %.2f, final %.2f, known cells %d",
+                raw, finalDifficulty, RegionalDifficulty.knownCells(level))), false);
+        source.sendSuccess(() -> Component.literal("  map: .=0, 1=<25, 2=<50, 3=<75, 4=<95, 5=max"), false);
+        for (String line : RegionalDifficulty.mapAround(level, pos, 4).split("\\n")) {
+            source.sendSuccess(() -> Component.literal("  " + line), false);
+        }
+        return 1;
+    }
+
+    private static int reportIntel(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal("[Warband] Faction intel requires a player source."));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("[Warband] Faction diplomacy / intel"), false);
+        for (String line : IllagerGrudgeSystem.intelLines(player)) {
+            source.sendSuccess(() -> Component.literal("  " + line), false);
+        }
+        return 1;
     }
 
     private static int reportDifficulty(CommandContext<CommandSourceStack> ctx) {

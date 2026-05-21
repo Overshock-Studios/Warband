@@ -4,16 +4,22 @@ import com.warband.config.WarbandConfig;
 import com.warband.entity.WarbandAttachments;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 /**
  * Per-player capability score — the input to {@link DifficultyMode#SCORE}.
  *
  * <p>The score is a stored {@code 0.0..1.0} value, not a live reading. Each
- * second it is compared against a fresh capability <i>sample</i> (gear: armor,
- * toughness, attack damage) and updated:
+ * second it is compared against a fresh capability <i>sample</i> (gear: worn
+ * armor/toughness, strongest carried weapon) and updated:
  * <ul>
  *   <li><b>Ratchet up</b> — if the sample is higher, the score jumps to it at
  *       once; gearing up should register immediately.</li>
@@ -23,9 +29,11 @@ import net.minecraft.world.entity.player.Player;
  * This makes difficulty track durable capability: a transient sword-swap never
  * moves it, but genuinely falling off eases difficulty over minutes.
  *
- * <p>Post-death <b>relief</b> layers on top: a real death stamps a relief
- * deadline ({@link WarbandAttachments#DEATH_RELIEF}) and the score is scaled
- * down until that tick passes.
+ * <p>Optional post-death <b>relief</b> can layer on top when enabled: a real
+ * death stamps a relief deadline ({@link WarbandAttachments#DEATH_RELIEF}) and
+ * the score is scaled down until that tick passes. It is off by default because
+ * regional difficulty should learn the player's actual pressure, not a temporary
+ * failure state.
  *
  * <p>TODO: fold in a progression term (advancements earned) once Phase 3 adds a
  * reason to track it — gear alone underrates a skilled but lightly-equipped
@@ -98,8 +106,30 @@ public final class PlayerScore {
     private static double sampleCapability(Player player) {
         double armor = clamp01(player.getAttributeValue(Attributes.ARMOR) / ARMOR_MAX);
         double toughness = clamp01(player.getAttributeValue(Attributes.ARMOR_TOUGHNESS) / TOUGHNESS_MAX);
-        double attack = clamp01((player.getAttributeValue(Attributes.ATTACK_DAMAGE) - 1.0) / ATTACK_SPAN);
+        double attack = clamp01(bestCarriedWeaponDamage(player) / ATTACK_SPAN);
         return clamp01(0.45 * armor + 0.25 * toughness + 0.30 * attack);
+    }
+
+    private static double bestCarriedWeaponDamage(Player player) {
+        double best = Math.max(0.0, player.getAttributeValue(Attributes.ATTACK_DAMAGE) - 1.0);
+        Container inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            best = Math.max(best, weaponDamage(inventory.getItem(i)));
+        }
+        return best;
+    }
+
+    private static double weaponDamage(ItemStack stack) {
+        if (stack.isEmpty()) return 0.0;
+        ItemAttributeModifiers modifiers = stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        double damage = modifiers.compute(Attributes.ATTACK_DAMAGE, 0.0, EquipmentSlot.MAINHAND);
+        if (damage > 0.0) return damage;
+
+        if (stack.is(Items.BOW)) return 5.0;
+        if (stack.is(Items.CROSSBOW)) return 6.0;
+        if (stack.is(Items.TRIDENT)) return 8.0;
+        if (stack.is(Items.MACE)) return 6.0;
+        return 0.0;
     }
 
     private static double clamp01(double v) {

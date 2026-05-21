@@ -3,6 +3,7 @@
   "package": "com.warband.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "LivingEntityFarmDropMixin",
     "MobFinalizeSpawnMixin",
     "MobGoalSelectorAccessor"
   ],

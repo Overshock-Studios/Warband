@@ -19,6 +19,7 @@ import java.util.Properties;
 public final class WarbandConfig {
 
     // ── Difficulty ──────────────────────────────────────────────────────────
+    public static ConfigProfile configProfile = ConfigProfile.CUSTOM;
     public static DifficultyMode difficultyMode = DifficultyMode.REGIONAL;
     /** Blocks from world spawn that stay fully vanilla (difficulty 0). */
     public static int safeRadius = 256;
@@ -28,22 +29,24 @@ public final class WarbandConfig {
     public static boolean respectGlobalDifficulty = true;
     /** If true, vanilla regional difficulty is folded in as an extra term. */
     public static boolean factorVanillaDifficulty = false;
-    /** Seconds of eased difficulty after a player death. 0 disables relief. */
-    public static int deathReliefSeconds = 600;
-    /** How much relief eases difficulty: 0.0 none .. 1.0 full calm. */
+    /** Optional mercy window after death. 0 disables relief and keeps regional pressure honest. */
+    public static int deathReliefSeconds = 0;
+    /** How much relief eases difficulty when enabled: 0.0 none .. 1.0 full calm. */
     public static double deathReliefStrength = 0.5;
     /** Fraction of the gap a player's capability score decays toward gear each second. */
     public static double scoreDecayRate = 0.005;
     /** REGIONAL mode: chunks around players sampled each interval. */
     public static int regionalSampleRadiusChunks = 2;
     public static double regionalBlendRate = 0.08;
+    public static double regionalAccelerationPerSample = 0.01;
+    public static double regionalAccelerationMax = 0.25;
     public static double regionalDecayRate = 0.002;
     /** REGIONAL mode: extra difficulty added per additional nearby player. */
     public static double regionalPlayerBonus = 0.15;
-    /** Minimum difficulty in the Nether, regardless of mode. */
-    public static double netherDifficultyFloor = 0.25;
-    /** Minimum difficulty in the End, regardless of mode. */
-    public static double endDifficultyFloor = 0.5;
+    /** Extra difficulty added in the Nether, regardless of mode. */
+    public static double netherDifficultyBonus = 0.25;
+    /** Extra difficulty added in the End, regardless of mode. */
+    public static double endDifficultyBonus = 0.35;
 
     // ── Squads & spawning ───────────────────────────────────────────────────
     public static boolean squadsEnabled = true;
@@ -73,6 +76,21 @@ public final class WarbandConfig {
     public static double directorBuildUpEnhancementChance = 0.70;
     public static double directorRelaxEnhancementChance = 0.15;
     public static boolean roleVisualsEnabled = true;
+    /** If true, squadded vanilla mobs get visible custom names like "Bruiser Zombie". */
+    public static boolean roleNamesEnabled = false;
+    public static boolean roleCuesEnabled = true;
+    public static boolean antiFarmEnabled = true;
+    public static int antiFarmCrowdThreshold = 10;
+    public static int antiFarmScanSeconds = 5;
+    public static int antiFarmTier1Crowd = 8;
+    public static int antiFarmTier2Crowd = 14;
+    public static int antiFarmTier3Crowd = 22;
+    public static boolean bossAbilitiesEnabled = true;
+    public static boolean extendedMobTacticsEnabled = true;
+    public static boolean ascensionCoreLootEnabled = true;
+    public static double ascensionCoreDropBaseChance = 0.002;
+    public static double ascensionCoreDropDifficultyChance = 0.018;
+    public static double chaosCoreDropDifficultyChance = 0.0025;
 
     // ── Illagers ────────────────────────────────────────────────────────────
     public static boolean illagerFactionsEnabled = true;
@@ -98,8 +116,8 @@ public final class WarbandConfig {
     public static boolean goatHornCommandEnabled = true;
 
     // ── Display ─────────────────────────────────────────────────────────────
-    /** Client-side: show the difficulty-lens HUD readout. */
-    public static boolean hudEnabled = true;
+    /** Legacy client-side HUD toggle. The default server-only path uses commands instead. */
+    public static boolean hudEnabled = false;
 
     private static final Path CONFIG_PATH = Path.of("config", "warband.properties");
 
@@ -116,6 +134,7 @@ public final class WarbandConfig {
             }
         }
 
+        configProfile = parseProfile(props, configProfile, logger);
         difficultyMode = parseMode(props, difficultyMode, logger);
         safeRadius = parseInt(props, "safeRadius", safeRadius, 0, 100_000, logger);
         maxDifficultyRadius = parseInt(props, "maxDifficultyRadius", maxDifficultyRadius, 1, 1_000_000, logger);
@@ -126,10 +145,12 @@ public final class WarbandConfig {
         scoreDecayRate = parseDouble(props, "scoreDecayRate", scoreDecayRate, 0.0, 1.0, logger);
         regionalSampleRadiusChunks = parseInt(props, "regionalSampleRadiusChunks", regionalSampleRadiusChunks, 0, 16, logger);
         regionalBlendRate = parseDouble(props, "regionalBlendRate", regionalBlendRate, 0.0, 1.0, logger);
+        regionalAccelerationPerSample = parseDouble(props, "regionalAccelerationPerSample", regionalAccelerationPerSample, 0.0, 1.0, logger);
+        regionalAccelerationMax = parseDouble(props, "regionalAccelerationMax", regionalAccelerationMax, 0.0, 1.0, logger);
         regionalDecayRate = parseDouble(props, "regionalDecayRate", regionalDecayRate, 0.0, 1.0, logger);
         regionalPlayerBonus = parseDouble(props, "regionalPlayerBonus", regionalPlayerBonus, 0.0, 1.0, logger);
-        netherDifficultyFloor = parseDouble(props, "netherDifficultyFloor", netherDifficultyFloor, 0.0, 1.0, logger);
-        endDifficultyFloor = parseDouble(props, "endDifficultyFloor", endDifficultyFloor, 0.0, 1.0, logger);
+        netherDifficultyBonus = parseDouble(props, "netherDifficultyBonus", netherDifficultyBonus, 0.0, 1.0, logger);
+        endDifficultyBonus = parseDouble(props, "endDifficultyBonus", endDifficultyBonus, 0.0, 1.0, logger);
 
         squadsEnabled = parseBoolean(props, "squadsEnabled", squadsEnabled, logger);
         maxSquadSize = parseInt(props, "maxSquadSize", maxSquadSize, 1, 64, logger);
@@ -151,6 +172,20 @@ public final class WarbandConfig {
         directorBuildUpEnhancementChance = parseDouble(props, "directorBuildUpEnhancementChance", directorBuildUpEnhancementChance, 0.0, 1.0, logger);
         directorRelaxEnhancementChance = parseDouble(props, "directorRelaxEnhancementChance", directorRelaxEnhancementChance, 0.0, 1.0, logger);
         roleVisualsEnabled = parseBoolean(props, "roleVisualsEnabled", roleVisualsEnabled, logger);
+        roleNamesEnabled = parseBoolean(props, "roleNamesEnabled", roleNamesEnabled, logger);
+        roleCuesEnabled = parseBoolean(props, "roleCuesEnabled", roleCuesEnabled, logger);
+        antiFarmEnabled = parseBoolean(props, "antiFarmEnabled", antiFarmEnabled, logger);
+        antiFarmCrowdThreshold = parseInt(props, "antiFarmCrowdThreshold", antiFarmCrowdThreshold, 3, 128, logger);
+        antiFarmScanSeconds = parseInt(props, "antiFarmScanSeconds", antiFarmScanSeconds, 1, 600, logger);
+        antiFarmTier1Crowd = parseInt(props, "antiFarmTier1Crowd", antiFarmTier1Crowd, 3, 128, logger);
+        antiFarmTier2Crowd = parseInt(props, "antiFarmTier2Crowd", antiFarmTier2Crowd, 3, 128, logger);
+        antiFarmTier3Crowd = parseInt(props, "antiFarmTier3Crowd", antiFarmTier3Crowd, 3, 128, logger);
+        bossAbilitiesEnabled = parseBoolean(props, "bossAbilitiesEnabled", bossAbilitiesEnabled, logger);
+        extendedMobTacticsEnabled = parseBoolean(props, "extendedMobTacticsEnabled", extendedMobTacticsEnabled, logger);
+        ascensionCoreLootEnabled = parseBoolean(props, "ascensionCoreLootEnabled", ascensionCoreLootEnabled, logger);
+        ascensionCoreDropBaseChance = parseDouble(props, "ascensionCoreDropBaseChance", ascensionCoreDropBaseChance, 0.0, 1.0, logger);
+        ascensionCoreDropDifficultyChance = parseDouble(props, "ascensionCoreDropDifficultyChance", ascensionCoreDropDifficultyChance, 0.0, 1.0, logger);
+        chaosCoreDropDifficultyChance = parseDouble(props, "chaosCoreDropDifficultyChance", chaosCoreDropDifficultyChance, 0.0, 1.0, logger);
 
         illagerFactionsEnabled = parseBoolean(props, "illagerFactionsEnabled", illagerFactionsEnabled, logger);
         illagerDoctrineEnabled = parseBoolean(props, "illagerDoctrineEnabled", illagerDoctrineEnabled, logger);
@@ -168,6 +203,7 @@ public final class WarbandConfig {
         goatHornCommandEnabled = parseBoolean(props, "goatHornCommandEnabled", goatHornCommandEnabled, logger);
         hudEnabled = parseBoolean(props, "hudEnabled", hudEnabled, logger);
 
+        applyProfile();
         save(logger);
         logger.info("[Warband] Config loaded");
     }
@@ -187,6 +223,8 @@ public final class WarbandConfig {
                 # Changes take effect on world reload or server restart.
 
                 # ── Difficulty ────────────────────────────────────────────────────
+                # Preset override: CUSTOM, SOFT, BALANCED, BRUTAL. CUSTOM respects every value below.
+                configProfile=%s
                 # How local difficulty is derived: DISTANCE, SCORE, or REGIONAL.
                 difficultyMode=%s
                 # Blocks from world spawn that stay fully vanilla (difficulty 0).
@@ -197,22 +235,24 @@ public final class WarbandConfig {
                 respectGlobalDifficulty=%s
                 # Fold vanilla regional difficulty in as an extra term.
                 factorVanillaDifficulty=%s
-                # Seconds of eased difficulty after a player death (0 disables).
+                # Optional mercy window after death. 0 disables relief and keeps regional pressure honest.
                 deathReliefSeconds=%d
-                # How much a death eases difficulty: 0.0 none .. 1.0 full calm.
+                # How much a death eases difficulty when enabled: 0.0 none .. 1.0 full calm.
                 deathReliefStrength=%s
                 # Fraction of the gap a capability score decays toward gear each second.
                 scoreDecayRate=%s
                 # REGIONAL mode: nearby chunks learn the running average player score.
                 regionalSampleRadiusChunks=%d
                 regionalBlendRate=%s
+                # REGIONAL mode: additional blend speed gained for repeated samples in the same area.
+                regionalAccelerationPerSample=%s
+                regionalAccelerationMax=%s
                 regionalDecayRate=%s
                 # REGIONAL mode: extra difficulty added per additional nearby player.
                 regionalPlayerBonus=%s
-                # Minimum difficulty in the Nether, regardless of mode.
-                netherDifficultyFloor=%s
-                # Minimum difficulty in the End, regardless of mode.
-                endDifficultyFloor=%s
+                # Extra difficulty added in the Nether / End, regardless of mode.
+                netherDifficultyBonus=%s
+                endDifficultyBonus=%s
                 # ── Squads & spawning ─────────────────────────────────────────────
                 # If true, mobs may spawn as role-based squads at higher difficulty.
                 squadsEnabled=%s
@@ -248,6 +288,27 @@ public final class WarbandConfig {
                 directorRelaxEnhancementChance=%s
                 # If true, squadded mobs get visible role silhouettes/equipment.
                 roleVisualsEnabled=%s
+                # If true, squadded vanilla mobs get visible custom names like "Bruiser Zombie".
+                roleNamesEnabled=%s
+                # If true, role assignment plays a restrained vanilla mob cue.
+                roleCuesEnabled=%s
+                # If true, trapped/crowded farm mobs suppress drops and try to escape.
+                antiFarmEnabled=%s
+                antiFarmCrowdThreshold=%d
+                antiFarmScanSeconds=%d
+                # Anti-farm escalation thresholds by nearby same-type crowd.
+                antiFarmTier1Crowd=%d
+                antiFarmTier2Crowd=%d
+                antiFarmTier3Crowd=%d
+                # If true, major bosses gain Warband phase abilities.
+                bossAbilitiesEnabled=%s
+                # If true, guardians, shulkers, ghasts, cave spiders, ravagers and wardens get Warband tactics.
+                extendedMobTacticsEnabled=%s
+                # Ascension Cores soft integration. Runtime item lookup only; no hard dependency.
+                ascensionCoreLootEnabled=%s
+                ascensionCoreDropBaseChance=%s
+                ascensionCoreDropDifficultyChance=%s
+                chaosCoreDropDifficultyChance=%s
 
                 # ── Illagers ─────────────────────────────────────────────────────
                 # If true, illagers receive regional faction identity in names and grudge records.
@@ -280,9 +341,10 @@ public final class WarbandConfig {
                 goatHornCommandEnabled=%s
 
                 # ── Display ───────────────────────────────────────────────────────
-                # Client-side: show the difficulty-lens HUD readout.
+                # Legacy client-side HUD readout. Server-only installs should leave this false.
                 hudEnabled=%s
                 """.formatted(
+                    configProfile,
                     difficultyMode,
                     safeRadius,
                     maxDifficultyRadius,
@@ -293,10 +355,12 @@ public final class WarbandConfig {
                     scoreDecayRate,
                     regionalSampleRadiusChunks,
                     regionalBlendRate,
+                    regionalAccelerationPerSample,
+                    regionalAccelerationMax,
                     regionalDecayRate,
                     regionalPlayerBonus,
-                    netherDifficultyFloor,
-                    endDifficultyFloor,
+                    netherDifficultyBonus,
+                    endDifficultyBonus,
                     squadsEnabled,
                     maxSquadSize,
                     squadPlayerBonus,
@@ -317,6 +381,20 @@ public final class WarbandConfig {
                     directorBuildUpEnhancementChance,
                     directorRelaxEnhancementChance,
                     roleVisualsEnabled,
+                    roleNamesEnabled,
+                    roleCuesEnabled,
+                    antiFarmEnabled,
+                    antiFarmCrowdThreshold,
+                    antiFarmScanSeconds,
+                    antiFarmTier1Crowd,
+                    antiFarmTier2Crowd,
+                    antiFarmTier3Crowd,
+                    bossAbilitiesEnabled,
+                    extendedMobTacticsEnabled,
+                    ascensionCoreLootEnabled,
+                    ascensionCoreDropBaseChance,
+                    ascensionCoreDropDifficultyChance,
+                    chaosCoreDropDifficultyChance,
                     illagerFactionsEnabled,
                     illagerDoctrineEnabled,
                     illagerGrudgesEnabled,
@@ -343,6 +421,54 @@ public final class WarbandConfig {
         if (s.equals("false")) return false;
         logger.warn("[Warband] '{}' is not a valid boolean ('{}'), using default {}", key, raw, def);
         return def;
+    }
+
+    private static ConfigProfile parseProfile(Properties props, ConfigProfile def, Logger logger) {
+        String raw = props.getProperty("configProfile");
+        ConfigProfile parsed = ConfigProfile.fromString(raw, null);
+        if (raw != null && parsed == null) {
+            logger.warn("[Warband] 'configProfile' is not a valid profile ('{}'), using default {}", raw, def);
+            return def;
+        }
+        return parsed != null ? parsed : def;
+    }
+
+    private static void applyProfile() {
+        switch (configProfile) {
+            case CUSTOM -> {
+            }
+            case SOFT -> {
+                naturalSquadChanceMax = 0.35;
+                statHealthBonusMax = 0.20;
+                statDamageBonusMax = 0.12;
+                maxSmartMobsPerPlayer = 16;
+                antiFarmTier1Crowd = 12;
+                antiFarmTier2Crowd = 20;
+                antiFarmTier3Crowd = 32;
+                ascensionCoreDropDifficultyChance = 0.010;
+            }
+            case BALANCED -> {
+                naturalSquadChanceMax = 0.60;
+                statHealthBonusMax = 0.35;
+                statDamageBonusMax = 0.20;
+                maxSmartMobsPerPlayer = 24;
+                antiFarmTier1Crowd = 8;
+                antiFarmTier2Crowd = 14;
+                antiFarmTier3Crowd = 22;
+                ascensionCoreDropDifficultyChance = 0.018;
+            }
+            case BRUTAL -> {
+                naturalSquadChanceMax = 0.85;
+                statHealthBonusMax = 0.45;
+                statDamageBonusMax = 0.28;
+                maxSmartMobsPerPlayer = 36;
+                antiFarmTier1Crowd = 6;
+                antiFarmTier2Crowd = 10;
+                antiFarmTier3Crowd = 16;
+                ascensionCoreDropDifficultyChance = 0.025;
+                chaosCoreDropDifficultyChance = 0.004;
+            }
+        }
     }
 
     private static DifficultyMode parseMode(Properties props, DifficultyMode def, Logger logger) {
