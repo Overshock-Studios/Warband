@@ -10,6 +10,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.EnumSet;
+
 /** Throws a short-lived cobweb at a visible nearby player. */
 public final class SpiderWebGoal extends SquadGoal {
 
@@ -20,6 +22,7 @@ public final class SpiderWebGoal extends SquadGoal {
 
     public SpiderWebGoal(Mob mob, Squad squad) {
         super(mob, squad, 1.0);
+        setFlags(EnumSet.noneOf(Flag.class));
     }
 
     @Override
@@ -42,7 +45,12 @@ public final class SpiderWebGoal extends SquadGoal {
 
     @Override
     public boolean canContinueToUse() {
-        return webPos != null && mob.tickCount <= fireAtTick;
+        return webPos != null && mob.tickCount <= fireAtTick + 1;
+    }
+
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
     }
 
     @Override

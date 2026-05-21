@@ -57,7 +57,9 @@ public final class AntiFarmDirector {
         AABB crowdBox = AABB.ofSize(mob.position(), 8.0, 4.0, 8.0);
         List<Mob> crowd = level.getEntitiesOfClass(Mob.class, crowdBox, other ->
                 other.isAlive() && other.getType() == mob.getType());
-        int tier = tierFor(level, mob, crowd.size());
+        int candidateTier = tierFor(level, mob, crowd.size());
+        int suspicion = updateSuspicion(mob, candidateTier);
+        int tier = confirmedTier(candidateTier, suspicion);
         if (tier <= farmTier(mob)) return;
 
         mob.setAttached(WarbandAttachments.FARM_TIER, tier);
@@ -78,6 +80,22 @@ public final class AntiFarmDirector {
             Vec3 shove = new Vec3(mob.getRandom().nextDouble() - 0.5, 0.35, mob.getRandom().nextDouble() - 0.5).normalize().scale(tier >= 3 ? 0.65 : 0.35);
             mob.setDeltaMovement(mob.getDeltaMovement().add(shove));
         }
+    }
+
+    private static int updateSuspicion(Mob mob, int candidateTier) {
+        int current = mob.getAttached(WarbandAttachments.FARM_SUSPICION) != null
+                ? mob.getAttached(WarbandAttachments.FARM_SUSPICION)
+                : 0;
+        int updated = candidateTier <= 0 ? Math.max(0, current - 1) : Math.min(6, current + 1);
+        mob.setAttached(WarbandAttachments.FARM_SUSPICION, updated);
+        return updated;
+    }
+
+    private static int confirmedTier(int candidateTier, int suspicion) {
+        if (candidateTier >= 3 && suspicion >= 3) return 3;
+        if (candidateTier >= 2 && suspicion >= 2) return 2;
+        if (candidateTier >= 1) return 1;
+        return 0;
     }
 
     private static int tierFor(ServerLevel level, Mob mob, int crowdSize) {

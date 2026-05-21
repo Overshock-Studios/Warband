@@ -44,7 +44,9 @@ public final class DifficultyManager {
         double value = rawDifficulty(level, pos, player);
 
         if (WarbandConfig.factorVanillaDifficulty) {
-            value = Math.max(value, level.getCurrentDifficultyAt(pos).getSpecialMultiplier());
+            double vanillaFloor = level.getCurrentDifficultyAt(pos).getSpecialMultiplier()
+                    * WarbandConfig.vanillaRegionalDifficultyWeight;
+            value = Math.max(value, vanillaFloor);
         }
         if (WarbandConfig.respectGlobalDifficulty) {
             value *= globalCeiling(global);

@@ -15,7 +15,6 @@ import com.warband.item.GoatHornCommand;
 import com.warband.spawn.AntiFarmDirector;
 import com.warband.spawn.BossDirector;
 import com.warband.spawn.EncounterDirector;
-import com.warband.spawn.LootIntegration;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +45,6 @@ public final class WarbandMod implements ModInitializer {
         EncounterDirector.register();
         AntiFarmDirector.register();
         BossDirector.register();
-        LootIntegration.register();
         FriendlyFireHandler.register();
         GoatHornCommand.register();
         SquadCoordinator.register();

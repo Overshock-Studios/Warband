@@ -6,7 +6,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.LevelResource;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -16,21 +21,28 @@ public final class RegionalDifficulty {
 
     private static final int SAMPLE_INTERVAL_TICKS = 20 * 5;
     private static final int EXPIRE_TICKS = 20 * 60 * 60;
+    private static final String SAVE_FILE = "warband-regional-difficulty.csv";
     private static final Map<String, Map<Long, Cell>> BY_DIMENSION = new HashMap<>();
 
     private static int tickCounter;
+    private static boolean loaded;
 
     private RegionalDifficulty() {
     }
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
+            if (!loaded) {
+                load(server);
+                loaded = true;
+            }
             if (++tickCounter < SAMPLE_INTERVAL_TICKS) return;
             tickCounter = 0;
 
             long now = server.overworld().getGameTime();
             sampleAll(server, now);
             decayAndTrim(now);
+            save(server);
         });
     }
 
@@ -174,6 +186,50 @@ public final class RegionalDifficulty {
         if (value < 0.75) return '3';
         if (value < 0.95) return '4';
         return '5';
+    }
+
+    private static void load(MinecraftServer server) {
+        Path path = savePath(server);
+        if (!Files.exists(path)) return;
+        try {
+            for (String line : Files.readAllLines(path, StandardCharsets.UTF_8)) {
+                if (line.isBlank() || line.startsWith("#")) continue;
+                String[] parts = line.split(",", 5);
+                if (parts.length != 5) continue;
+                String dimension = parts[0];
+                long key = Long.parseLong(parts[1]);
+                double value = Double.parseDouble(parts[2]);
+                long lastTouched = Long.parseLong(parts[3]);
+                int pressureSamples = Integer.parseInt(parts[4]);
+                BY_DIMENSION.computeIfAbsent(dimension, ignored -> new HashMap<>())
+                        .put(key, new Cell(clamp01(value), lastTouched, Math.max(0, pressureSamples)));
+            }
+        } catch (IOException | NumberFormatException ignored) {
+            BY_DIMENSION.clear();
+        }
+    }
+
+    private static void save(MinecraftServer server) {
+        StringBuilder out = new StringBuilder("# dimension,chunkKey,value,lastTouched,pressureSamples\n");
+        for (Map.Entry<String, Map<Long, Cell>> dimEntry : BY_DIMENSION.entrySet()) {
+            for (Map.Entry<Long, Cell> cellEntry : dimEntry.getValue().entrySet()) {
+                Cell cell = cellEntry.getValue();
+                out.append(dimEntry.getKey()).append(',')
+                        .append(cellEntry.getKey()).append(',')
+                        .append(cell.value).append(',')
+                        .append(cell.lastTouched).append(',')
+                        .append(cell.pressureSamples).append('\n');
+            }
+        }
+        try {
+            Files.writeString(savePath(server), out.toString(), StandardCharsets.UTF_8);
+        } catch (IOException ignored) {
+            // Difficulty memory is balance state, not critical save data.
+        }
+    }
+
+    private static Path savePath(MinecraftServer server) {
+        return server.getWorldPath(LevelResource.ROOT).resolve(SAVE_FILE);
     }
 
     private record Cell(double value, long lastTouched, int pressureSamples) {

@@ -131,9 +131,7 @@ public final class SquadCoordinator {
         ServerLevel level = (ServerLevel) mob.level();
         if (!formsNaturalSquads(mob)) {
             if (Tactic.chooseFor(mob, difficulty, Role.NONE) == 0) return false;
-            Squad solo = new Squad(nextSquadId++, level);
-            SQUADS.put(solo.id(), solo);
-            addMob(solo, mob, Role.NONE, difficulty);
+            addSoloTactics(level, mob, difficulty);
             return true;
         }
 
@@ -274,25 +272,35 @@ public final class SquadCoordinator {
         squad.add(mob);
     }
 
+    private static void addSoloTactics(ServerLevel level, Mob mob, double difficulty) {
+        SpawnDirector.stamp(mob, difficulty);
+        addGoals(mob, new Squad(MobData.NO_SQUAD, level), Role.NONE);
+    }
+
     private static void addGoals(Mob mob, Squad squad, Role role) {
         MobGoalSelectorAccessor accessor = (MobGoalSelectorAccessor) mob;
         accessor.warband$goalSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
         accessor.warband$targetSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
-        accessor.warband$targetSelector().addGoal(0, new SquadTargetGoal(mob, squad));
-        if (MobData.get(mob).difficulty() >= RETREAT_MIN_DIFFICULTY) {
-            accessor.warband$goalSelector().addGoal(2, new RetreatWhenLowGoal(mob, squad));
+        if (role != Role.NONE) {
+            accessor.warband$targetSelector().addGoal(0, new SquadTargetGoal(mob, squad));
         }
-        accessor.warband$goalSelector().addGoal(3, new RegroupGoal(mob, squad));
-        if (canCallBackup(mob)) {
-            accessor.warband$goalSelector().addGoal(4, new CallBackupGoal(mob, squad));
-        }
-        accessor.warband$goalSelector().addGoal(6, new InvestigateLastKnownGoal(mob, squad));
 
-        if (role == Role.SKIRMISHER || role == Role.MARKSMAN || role == Role.SUPPORT) {
-            accessor.warband$goalSelector().addGoal(2, new KiteGoal(mob, squad));
-            accessor.warband$goalSelector().addGoal(3, new BreakLosGoal(mob, squad));
-        } else {
-            accessor.warband$goalSelector().addGoal(5, new FlankGoal(mob, squad));
+        if (role != Role.NONE) {
+            if (MobData.get(mob).difficulty() >= RETREAT_MIN_DIFFICULTY) {
+                accessor.warband$goalSelector().addGoal(2, new RetreatWhenLowGoal(mob, squad));
+            }
+            accessor.warband$goalSelector().addGoal(3, new RegroupGoal(mob, squad));
+            if (canCallBackup(mob)) {
+                accessor.warband$goalSelector().addGoal(4, new CallBackupGoal(mob, squad));
+            }
+            accessor.warband$goalSelector().addGoal(6, new InvestigateLastKnownGoal(mob, squad));
+
+            if (role == Role.SKIRMISHER || role == Role.MARKSMAN || role == Role.SUPPORT) {
+                accessor.warband$goalSelector().addGoal(2, new KiteGoal(mob, squad));
+                accessor.warband$goalSelector().addGoal(3, new BreakLosGoal(mob, squad));
+            } else {
+                accessor.warband$goalSelector().addGoal(5, new FlankGoal(mob, squad));
+            }
         }
 
         MobData data = MobData.get(mob);
@@ -522,7 +530,12 @@ public final class SquadCoordinator {
         if (nearest == null) return true;
 
         AABB box = AABB.ofSize(nearest.position(), SMART_SCAN_RADIUS * 2.0, SMART_SCAN_RADIUS, SMART_SCAN_RADIUS * 2.0);
-        List<Mob> smart = new ArrayList<>(level.getEntitiesOfClass(Mob.class, box, candidate -> MobData.get(candidate).inSquad()));
+        List<Mob> smart = new ArrayList<>(level.getEntitiesOfClass(Mob.class, box, SquadCoordinator::hasWarbandAi));
         return smart.size() < WarbandConfig.maxSmartMobsPerPlayer;
+    }
+
+    private static boolean hasWarbandAi(Mob mob) {
+        MobData data = MobData.get(mob);
+        return data.inSquad() || data.tactics() != 0;
     }
 }

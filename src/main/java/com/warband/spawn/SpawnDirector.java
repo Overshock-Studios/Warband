@@ -74,6 +74,7 @@ public final class SpawnDirector {
         if (!(mob instanceof Enemy)) return;
         if (!WORLD_SPAWNS.contains(reason)) return;
         if (SquadCoordinator.isSpawningSquadmate()) return;
+        if (BossDirector.isSpawningWitherMinion()) return;
         if (MobData.isStamped(mob)) return;
 
         ServerLevel level = accessor.getLevel();

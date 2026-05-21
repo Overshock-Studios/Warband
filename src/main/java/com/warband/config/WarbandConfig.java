@@ -27,8 +27,10 @@ public final class WarbandConfig {
     public static int maxDifficultyRadius = 4096;
     /** If true, Peaceful disables Warband and Easy/Normal lower its ceiling. */
     public static boolean respectGlobalDifficulty = true;
-    /** If true, vanilla regional difficulty is folded in as an extra term. */
-    public static boolean factorVanillaDifficulty = false;
+    /** If true, vanilla regional difficulty contributes as a weighted floor. */
+    public static boolean factorVanillaDifficulty = true;
+    /** Strength of vanilla regional difficulty when enabled. */
+    public static double vanillaRegionalDifficultyWeight = 0.35;
     /** Optional mercy window after death. 0 disables relief and keeps regional pressure honest. */
     public static int deathReliefSeconds = 0;
     /** How much relief eases difficulty when enabled: 0.0 none .. 1.0 full calm. */
@@ -87,10 +89,6 @@ public final class WarbandConfig {
     public static int antiFarmTier3Crowd = 22;
     public static boolean bossAbilitiesEnabled = true;
     public static boolean extendedMobTacticsEnabled = true;
-    public static boolean ascensionCoreLootEnabled = true;
-    public static double ascensionCoreDropBaseChance = 0.002;
-    public static double ascensionCoreDropDifficultyChance = 0.018;
-    public static double chaosCoreDropDifficultyChance = 0.0025;
 
     // ── Illagers ────────────────────────────────────────────────────────────
     public static boolean illagerFactionsEnabled = true;
@@ -115,10 +113,6 @@ public final class WarbandConfig {
     // ── Items ──────────────────────────────────────────────────────────────
     public static boolean goatHornCommandEnabled = true;
 
-    // ── Display ─────────────────────────────────────────────────────────────
-    /** Legacy client-side HUD toggle. The default server-only path uses commands instead. */
-    public static boolean hudEnabled = false;
-
     private static final Path CONFIG_PATH = Path.of("config", "warband.properties");
 
     private WarbandConfig() {
@@ -140,6 +134,7 @@ public final class WarbandConfig {
         maxDifficultyRadius = parseInt(props, "maxDifficultyRadius", maxDifficultyRadius, 1, 1_000_000, logger);
         respectGlobalDifficulty = parseBoolean(props, "respectGlobalDifficulty", respectGlobalDifficulty, logger);
         factorVanillaDifficulty = parseBoolean(props, "factorVanillaDifficulty", factorVanillaDifficulty, logger);
+        vanillaRegionalDifficultyWeight = parseDouble(props, "vanillaRegionalDifficultyWeight", vanillaRegionalDifficultyWeight, 0.0, 1.0, logger);
         deathReliefSeconds = parseInt(props, "deathReliefSeconds", deathReliefSeconds, 0, 100_000, logger);
         deathReliefStrength = parseDouble(props, "deathReliefStrength", deathReliefStrength, 0.0, 1.0, logger);
         scoreDecayRate = parseDouble(props, "scoreDecayRate", scoreDecayRate, 0.0, 1.0, logger);
@@ -182,10 +177,6 @@ public final class WarbandConfig {
         antiFarmTier3Crowd = parseInt(props, "antiFarmTier3Crowd", antiFarmTier3Crowd, 3, 128, logger);
         bossAbilitiesEnabled = parseBoolean(props, "bossAbilitiesEnabled", bossAbilitiesEnabled, logger);
         extendedMobTacticsEnabled = parseBoolean(props, "extendedMobTacticsEnabled", extendedMobTacticsEnabled, logger);
-        ascensionCoreLootEnabled = parseBoolean(props, "ascensionCoreLootEnabled", ascensionCoreLootEnabled, logger);
-        ascensionCoreDropBaseChance = parseDouble(props, "ascensionCoreDropBaseChance", ascensionCoreDropBaseChance, 0.0, 1.0, logger);
-        ascensionCoreDropDifficultyChance = parseDouble(props, "ascensionCoreDropDifficultyChance", ascensionCoreDropDifficultyChance, 0.0, 1.0, logger);
-        chaosCoreDropDifficultyChance = parseDouble(props, "chaosCoreDropDifficultyChance", chaosCoreDropDifficultyChance, 0.0, 1.0, logger);
 
         illagerFactionsEnabled = parseBoolean(props, "illagerFactionsEnabled", illagerFactionsEnabled, logger);
         illagerDoctrineEnabled = parseBoolean(props, "illagerDoctrineEnabled", illagerDoctrineEnabled, logger);
@@ -201,10 +192,9 @@ public final class WarbandConfig {
         warmarshalHealthBonus = parseDouble(props, "warmarshalHealthBonus", warmarshalHealthBonus, 0.0, 10.0, logger);
         warmarshalDamageBonus = parseDouble(props, "warmarshalDamageBonus", warmarshalDamageBonus, 0.0, 10.0, logger);
         goatHornCommandEnabled = parseBoolean(props, "goatHornCommandEnabled", goatHornCommandEnabled, logger);
-        hudEnabled = parseBoolean(props, "hudEnabled", hudEnabled, logger);
 
-        applyProfile();
         save(logger);
+        applyProfile();
         logger.info("[Warband] Config loaded");
     }
 
@@ -233,8 +223,9 @@ public final class WarbandConfig {
                 maxDifficultyRadius=%d
                 # Peaceful disables Warband; Easy/Normal lower its difficulty ceiling.
                 respectGlobalDifficulty=%s
-                # Fold vanilla regional difficulty in as an extra term.
+                # Fold vanilla regional difficulty in as a weighted floor.
                 factorVanillaDifficulty=%s
+                vanillaRegionalDifficultyWeight=%s
                 # Optional mercy window after death. 0 disables relief and keeps regional pressure honest.
                 deathReliefSeconds=%d
                 # How much a death eases difficulty when enabled: 0.0 none .. 1.0 full calm.
@@ -304,11 +295,6 @@ public final class WarbandConfig {
                 bossAbilitiesEnabled=%s
                 # If true, guardians, shulkers, ghasts, cave spiders, ravagers and wardens get Warband tactics.
                 extendedMobTacticsEnabled=%s
-                # Ascension Cores soft integration. Runtime item lookup only; no hard dependency.
-                ascensionCoreLootEnabled=%s
-                ascensionCoreDropBaseChance=%s
-                ascensionCoreDropDifficultyChance=%s
-                chaosCoreDropDifficultyChance=%s
 
                 # ── Illagers ─────────────────────────────────────────────────────
                 # If true, illagers receive regional faction identity in names and grudge records.
@@ -340,9 +326,6 @@ public final class WarbandConfig {
                 # If true, goat horns also rally nearby golems and disrupt Warband illagers.
                 goatHornCommandEnabled=%s
 
-                # ── Display ───────────────────────────────────────────────────────
-                # Legacy client-side HUD readout. Server-only installs should leave this false.
-                hudEnabled=%s
                 """.formatted(
                     configProfile,
                     difficultyMode,
@@ -350,6 +333,7 @@ public final class WarbandConfig {
                     maxDifficultyRadius,
                     respectGlobalDifficulty,
                     factorVanillaDifficulty,
+                    vanillaRegionalDifficultyWeight,
                     deathReliefSeconds,
                     deathReliefStrength,
                     scoreDecayRate,
@@ -391,10 +375,6 @@ public final class WarbandConfig {
                     antiFarmTier3Crowd,
                     bossAbilitiesEnabled,
                     extendedMobTacticsEnabled,
-                    ascensionCoreLootEnabled,
-                    ascensionCoreDropBaseChance,
-                    ascensionCoreDropDifficultyChance,
-                    chaosCoreDropDifficultyChance,
                     illagerFactionsEnabled,
                     illagerDoctrineEnabled,
                     illagerGrudgesEnabled,
@@ -408,8 +388,7 @@ public final class WarbandConfig {
                     outpostGarrisonFloor,
                     warmarshalHealthBonus,
                     warmarshalDamageBonus,
-                    goatHornCommandEnabled,
-                    hudEnabled
+                    goatHornCommandEnabled
                 );
     }
 
@@ -445,7 +424,6 @@ public final class WarbandConfig {
                 antiFarmTier1Crowd = 12;
                 antiFarmTier2Crowd = 20;
                 antiFarmTier3Crowd = 32;
-                ascensionCoreDropDifficultyChance = 0.010;
             }
             case BALANCED -> {
                 naturalSquadChanceMax = 0.60;
@@ -455,18 +433,15 @@ public final class WarbandConfig {
                 antiFarmTier1Crowd = 8;
                 antiFarmTier2Crowd = 14;
                 antiFarmTier3Crowd = 22;
-                ascensionCoreDropDifficultyChance = 0.018;
             }
             case BRUTAL -> {
-                naturalSquadChanceMax = 0.85;
+                naturalSquadChanceMax = 0.75;
                 statHealthBonusMax = 0.45;
                 statDamageBonusMax = 0.28;
                 maxSmartMobsPerPlayer = 36;
                 antiFarmTier1Crowd = 6;
                 antiFarmTier2Crowd = 10;
                 antiFarmTier3Crowd = 16;
-                ascensionCoreDropDifficultyChance = 0.025;
-                chaosCoreDropDifficultyChance = 0.004;
             }
         }
     }

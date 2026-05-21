@@ -21,6 +21,7 @@ import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.skeleton.WitherSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -41,6 +42,7 @@ public final class BossDirector {
     private static final Map<UUID, BossFightState> DRAGON_STATE = new HashMap<>();
     private static final double BOSS_DIFFICULTY = 1.0;
     private static int tickCounter;
+    private static boolean spawningWitherMinion;
     private static final int WITHER_SPAWN_GRACE_TICKS = 20 * 18;
 
     private BossDirector() {
@@ -63,6 +65,7 @@ public final class BossDirector {
                 }
                 resolvePendingBlinks(level);
             }
+            cleanupRuntimeState(server.getAllLevels());
         });
     }
 
@@ -71,6 +74,10 @@ public final class BossDirector {
         UUID ownerB = WITHER_MINION_OWNER.get(b.getUUID());
         return (ownerA != null && (ownerA.equals(b.getUUID()) || ownerA.equals(ownerB)))
                 || (ownerB != null && ownerB.equals(a.getUUID()));
+    }
+
+    public static boolean isSpawningWitherMinion() {
+        return spawningWitherMinion;
     }
 
     private static void tickWither(ServerLevel level, WitherBoss wither) {
@@ -140,7 +147,8 @@ public final class BossDirector {
         level.playSound(null, wither.getX(), wither.getY(), wither.getZ(), SoundEvents.WITHER_SHOOT, SoundSource.HOSTILE, 1.4f, 0.65f);
         level.sendParticles(ParticleTypes.LARGE_SMOKE, wither.getX(), wither.getY() + 1.2, wither.getZ(), 35, 1.0, 0.8, 1.0, 0.04);
 
-        AABB hitbox = AABB.ofSize(target.position(), 7.0, 5.0, 7.0);
+        Vec3 impactCenter = wither.position().add(direction.scale(4.0));
+        AABB hitbox = AABB.ofSize(impactCenter, 6.0, 5.0, 6.0);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, hitbox,
                 entity -> entity != wither && entity.isAlive() && !isMinionOf(entity, wither))) {
             victim.hurtServer(level, wither.damageSources().mobAttack(wither), (float) (10.0 * BOSS_DIFFICULTY));
@@ -203,7 +211,13 @@ public final class BossDirector {
         BlockPos origin = wither.blockPosition();
         for (int i = 0; i < count; i++) {
             BlockPos pos = origin.offset(wither.getRandom().nextInt(9) - 4, 0, wither.getRandom().nextInt(9) - 4);
-            WitherSkeleton skeleton = EntityType.WITHER_SKELETON.spawn(level, pos, EntitySpawnReason.EVENT);
+            WitherSkeleton skeleton;
+            spawningWitherMinion = true;
+            try {
+                skeleton = EntityType.WITHER_SKELETON.spawn(level, pos, EntitySpawnReason.EVENT);
+            } finally {
+                spawningWitherMinion = false;
+            }
             if (skeleton != null) {
                 WITHER_MINION_OWNER.put(skeleton.getUUID(), wither.getUUID());
                 skeleton.setTarget(target);
@@ -232,16 +246,21 @@ public final class BossDirector {
             state = BossFightState.PHASE_TWO;
         }
         NEXT_DRAGON_ATTACK.put(dragon.getUUID(), state == BossFightState.LAST_STAND
-                ? now + 70 + dragon.getRandom().nextInt(50)
-                : now + 100 + dragon.getRandom().nextInt(80));
+                ? now + 55 + dragon.getRandom().nextInt(45)
+                : now + 80 + dragon.getRandom().nextInt(60));
 
         boolean blinkReady = now >= NEXT_DRAGON_BLINK.getOrDefault(dragon.getUUID(), 0L)
                 && !PENDING_BLINKS.containsKey(dragon.getUUID());
-        int roll = dragon.getRandom().nextInt(blinkReady && state != BossFightState.OPENING ? 4 : 2);
-        if (blinkReady && roll == 0) {
+        if (blinkReady && state != BossFightState.OPENING && dragon.getRandom().nextInt(5) == 0) {
             beginDragonBlink(level, dragon, target);
-        } else if (roll <= 1) {
+            return;
+        }
+
+        int roll = dragon.getRandom().nextInt(state == BossFightState.OPENING ? 3 : 4);
+        if (roll <= 1) {
             dragonCharge(level, dragon, target);
+        } else if (roll == 2) {
+            dragonEnderGale(level, dragon, target);
         } else {
             dragonBreathLine(level, dragon, target);
         }
@@ -253,11 +272,11 @@ public final class BossDirector {
         Vec3 destination = new Vec3(behind.x, Math.max(level.getMinY() + 16.0, behind.y), behind.z);
 
         long now = level.getGameTime();
-        PENDING_BLINKS.put(dragon.getUUID(), new PendingBlink(now + 34, destination, target.getUUID()));
+        PENDING_BLINKS.put(dragon.getUUID(), new PendingBlink(level.dimension(), now + 34, destination, target.getUUID()));
         NEXT_DRAGON_BLINK.put(dragon.getUUID(), now + 20 * 45L + dragon.getRandom().nextInt(20 * 25));
         NEXT_DRAGON_ATTACK.put(dragon.getUUID(), now + 80);
 
-        dragon.setDeltaMovement(dragon.getDeltaMovement().scale(0.35));
+        dragon.setDeltaMovement(Vec3.ZERO);
         level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.HOSTILE, 1.6f, 0.55f);
         level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.ENDERMAN_STARE, SoundSource.HOSTILE, 1.2f, 0.65f);
         level.sendParticles(ParticleTypes.PORTAL, origin.x, origin.y + 2.0, origin.z, 180, 5.0, 3.0, 5.0, 0.18);
@@ -267,15 +286,24 @@ public final class BossDirector {
     private static void resolvePendingBlinks(ServerLevel level) {
         long now = level.getGameTime();
         PENDING_BLINKS.entrySet().removeIf(entry -> {
-            if (now < entry.getValue().executeAt()) return false;
+            PendingBlink pending = entry.getValue();
+            if (!pending.dimension().equals(level.dimension())) return false;
             Entity entity = level.getEntity(entry.getKey());
             if (!(entity instanceof EnderDragon dragon) || !dragon.isAlive()) return true;
 
+            if (now < pending.executeAt()) {
+                dragon.setDeltaMovement(Vec3.ZERO);
+                Vec3 pos = dragon.position();
+                level.sendParticles(ParticleTypes.REVERSE_PORTAL, pos.x, pos.y + 2.0, pos.z, 70, 5.0, 3.0, 5.0, 0.03);
+                level.sendParticles(ParticleTypes.WITCH, pos.x, pos.y + 2.0, pos.z, 35, 4.0, 2.0, 4.0, 0.01);
+                return false;
+            }
+
             Vec3 old = dragon.position();
-            Vec3 destination = entry.getValue().destination();
+            Vec3 destination = pending.destination();
             dragon.setPos(destination.x, destination.y, destination.z);
 
-            Entity targetEntity = level.getEntity(entry.getValue().targetId());
+            Entity targetEntity = level.getEntity(pending.targetId());
             if (targetEntity instanceof LivingEntity target && target.isAlive()) {
                 dragon.setDeltaMovement(target.position().subtract(dragon.position()).normalize().scale(1.05));
             }
@@ -316,6 +344,33 @@ public final class BossDirector {
         }
     }
 
+    private static void dragonEnderGale(ServerLevel level, EnderDragon dragon, LivingEntity target) {
+        Vec3 center = target.position();
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.HOSTILE, 1.8f, 0.65f);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.ENDERMAN_STARE, SoundSource.HOSTILE, 0.9f, 0.8f);
+
+        for (int ring = 0; ring < 3; ring++) {
+            double radius = 3.5 + ring * 2.5;
+            for (int i = 0; i < 18; i++) {
+                double angle = (Math.PI * 2.0 * i) / 18.0 + ring * 0.35;
+                double x = center.x + Math.cos(angle) * radius;
+                double z = center.z + Math.sin(angle) * radius;
+                level.sendParticles(ParticleTypes.REVERSE_PORTAL, x, center.y + 0.4 + ring * 0.35, z, 3, 0.08, 0.08, 0.08, 0.0);
+            }
+        }
+
+        AABB gale = AABB.ofSize(center, 18.0, 10.0, 18.0);
+        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, gale, entity -> entity != dragon && entity.isAlive())) {
+            Vec3 pull = center.subtract(victim.position());
+            double distance = Math.max(1.0, pull.length());
+            Vec3 motion = pull.normalize().scale(Math.min(1.1, 4.0 / distance)).add(0.0, 0.35, 0.0);
+            victim.setDeltaMovement(victim.getDeltaMovement().add(motion));
+            if (distance < 4.0) {
+                victim.hurtServer(level, dragon.damageSources().magic(), 5.0f);
+            }
+        }
+    }
+
     private static LivingEntity nearestTarget(ServerLevel level, Vec3 pos, double radius) {
         Player player = level.getNearestPlayer(pos.x, pos.y, pos.z, radius, false);
         return player != null && player.isAlive() ? player : null;
@@ -347,12 +402,30 @@ public final class BossDirector {
         return DRAGON_STATE.computeIfAbsent(dragon.getUUID(), ignored -> BossFightState.OPENING);
     }
 
+    private static void cleanupRuntimeState(Iterable<ServerLevel> levels) {
+        NEXT_WITHER_ATTACK.keySet().removeIf(uuid -> !entityAlive(levels, uuid));
+        NEXT_DRAGON_ATTACK.keySet().removeIf(uuid -> !entityAlive(levels, uuid));
+        NEXT_DRAGON_BLINK.keySet().removeIf(uuid -> !entityAlive(levels, uuid));
+        PENDING_BLINKS.keySet().removeIf(uuid -> !entityAlive(levels, uuid));
+        WITHER_MINION_OWNER.keySet().removeIf(uuid -> !entityAlive(levels, uuid));
+        WITHER_STATE.keySet().removeIf(uuid -> !entityAlive(levels, uuid));
+        DRAGON_STATE.keySet().removeIf(uuid -> !entityAlive(levels, uuid));
+    }
+
+    private static boolean entityAlive(Iterable<ServerLevel> levels, UUID uuid) {
+        for (ServerLevel level : levels) {
+            Entity entity = level.getEntity(uuid);
+            if (entity != null && entity.isAlive()) return true;
+        }
+        return false;
+    }
+
     private enum BossFightState {
         OPENING,
         PHASE_TWO,
         LAST_STAND
     }
 
-    private record PendingBlink(long executeAt, Vec3 destination, UUID targetId) {
+    private record PendingBlink(net.minecraft.resources.ResourceKey<Level> dimension, long executeAt, Vec3 destination, UUID targetId) {
     }
 }

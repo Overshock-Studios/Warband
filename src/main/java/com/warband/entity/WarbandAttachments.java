@@ -51,6 +51,12 @@ public final class WarbandAttachments {
             builder -> builder.persistent(Codec.INT)
     );
 
+    /** Per-mob consecutive anti-farm detections before harsh suppression is allowed. */
+    public static final AttachmentType<Integer> FARM_SUSPICION = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "farm_suspicion"),
+            builder -> builder.persistent(Codec.INT)
+    );
+
     /** Per-boss marker: one-shot Warband phase transition has fired. */
     public static final AttachmentType<Boolean> BOSS_PHASE_TRIGGERED = AttachmentRegistry.create(
             Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "boss_phase_triggered"),

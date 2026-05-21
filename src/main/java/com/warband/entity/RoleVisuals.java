@@ -32,7 +32,7 @@ public final class RoleVisuals {
     public static void apply(Mob mob, Role role, double difficulty) {
         if (role == Role.NONE) return;
 
-        applyRoleName(mob, role);
+        applyRoleName(mob, role, difficulty);
         TacticalEffects.roleCue(mob, role);
         if (!WarbandConfig.roleVisualsEnabled) return;
         applyScale(mob, role);
@@ -68,8 +68,9 @@ public final class RoleVisuals {
         }
     }
 
-    private static void applyRoleName(Mob mob, Role role) {
+    private static void applyRoleName(Mob mob, Role role, double difficulty) {
         if (!WarbandConfig.roleNamesEnabled || mob.hasCustomName() || IllagerInvasionCompat.isIllagerLike(mob)) return;
+        if (role != Role.LEADER && difficulty < 0.75) return;
         mob.setCustomName(Component.literal(displayName(role) + " " + mob.getType().getDescription().getString()));
         mob.setCustomNameVisible(true);
     }
