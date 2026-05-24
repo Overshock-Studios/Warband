@@ -119,12 +119,19 @@ public final class SquadCoordinator {
             }
         });
 
-        // Re-attach goals to mobs loaded from disk. finalizeSpawn → ENTITY_LOAD
-        // for fresh spawns, so the marker is already set and we skip.
+        // Re-attach goals to mobs loaded from disk, and first-time-stamp Enemy
+        // mobs that missed their finalizeSpawn (e.g. structure-piece spawns from
+        // off-thread C2ME worldgen). finalizeSpawn → ENTITY_LOAD for fresh main-
+        // thread spawns, so the marker is already set and we skip.
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (!WarbandConfig.squadsEnabled) return;
             if (!(entity instanceof Mob mob)) return;
-            if (!MobData.isStamped(mob)) return;
+
+            if (!MobData.isStamped(mob)) {
+                // Off-thread worldgen spawn caught up on main-thread load.
+                SpawnDirector.tryStampLoaded(mob, level);
+                return;
+            }
             if (Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.WARBAND_GOALS_BOUND))) return;
 
             MobData data = MobData.get(mob);

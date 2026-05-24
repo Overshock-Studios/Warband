@@ -81,6 +81,32 @@ public final class SpawnDirector {
         if (MobData.isStamped(mob)) return;
 
         ServerLevel level = accessor.getLevel();
+        // Bail out if we're running on a worldgen worker thread (e.g. C2ME structure
+        // piece spawns). Any chunk-touching call here would deadlock the server
+        // thread against the worker waiting on chunk completion. Vanilla structure
+        // mobs spawned in that path are picked up later by tryStampLoaded when
+        // their chunk loads on the main thread.
+        if (level.getServer() != null && !level.getServer().isSameThread()) {
+            return;
+        }
+        runStampPipeline(mob, level, reason);
+    }
+
+    /**
+     * Called from the SquadCoordinator ENTITY_LOAD hook on the main thread for
+     * Enemy mobs that were never stamped (typically structure-piece spawns from
+     * off-thread worldgen). Treats them like a natural spawn.
+     */
+    public static void tryStampLoaded(Mob mob, ServerLevel level) {
+        if (!(mob instanceof Enemy)) return;
+        if (MobData.isStamped(mob)) return;
+        if (SquadCoordinator.isSpawningSquadmate()) return;
+        if (BossDirector.isSpawningWitherMinion()) return;
+        if (level.getServer() != null && !level.getServer().isSameThread()) return;
+        runStampPipeline(mob, level, EntitySpawnReason.NATURAL);
+    }
+
+    private static void runStampPipeline(Mob mob, ServerLevel level, EntitySpawnReason reason) {
         double difficulty = DifficultyManager.getDifficulty(level, mob.blockPosition());
         if (IllagerInvasionCompat.isIllagerLike(mob)) {
             // Naturally-spawned stronghold illagers (e.g. outpost pillagers) are

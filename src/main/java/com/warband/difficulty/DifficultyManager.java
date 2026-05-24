@@ -43,7 +43,11 @@ public final class DifficultyManager {
 
         double value = rawDifficulty(level, pos, player);
 
-        if (WarbandConfig.factorVanillaDifficulty) {
+        // Only sample vanilla regional difficulty if the chunk is already loaded.
+        // Calling getCurrentDifficultyAt during a finalizeSpawn that fires from
+        // C2ME worldgen would force-load the chunk we are currently generating,
+        // deadlocking the server thread against the worldgen worker.
+        if (WarbandConfig.factorVanillaDifficulty && level.hasChunkAt(pos)) {
             double vanillaFloor = level.getCurrentDifficultyAt(pos).getSpecialMultiplier()
                     * WarbandConfig.vanillaRegionalDifficultyWeight;
             value = Math.max(value, vanillaFloor);
