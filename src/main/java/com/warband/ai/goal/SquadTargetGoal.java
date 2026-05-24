@@ -5,6 +5,8 @@ import com.warband.entity.MobData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.EnumSet;
 
@@ -38,7 +40,8 @@ public final class SquadTargetGoal extends Goal implements WarbandGoal {
         }
 
         LivingEntity squadTarget = squad.target();
-        if (squadTarget != null && squadTarget.isAlive() && mob.hasLineOfSight(squadTarget)) {
+        if (squadTarget != null && squadTarget.isAlive() && mob.hasLineOfSight(squadTarget)
+                && !shouldRespectEyeContact(squadTarget)) {
             mob.setTarget(squadTarget);
         }
     }
@@ -48,7 +51,13 @@ public final class SquadTargetGoal extends Goal implements WarbandGoal {
         return currentTarget == null
                 && squadTarget != null
                 && squadTarget.isAlive()
-                && mob.hasLineOfSight(squadTarget);
+                && mob.hasLineOfSight(squadTarget)
+                && !shouldRespectEyeContact(squadTarget);
+    }
+
+    /** Endermen only aggro on players who look them in the eye, even via a squad. */
+    private boolean shouldRespectEyeContact(LivingEntity target) {
+        return mob instanceof EnderMan && target instanceof Player;
     }
 
     private boolean isSquadmate(LivingEntity target) {

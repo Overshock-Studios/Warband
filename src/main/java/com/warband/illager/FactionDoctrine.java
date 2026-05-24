@@ -7,8 +7,7 @@ public enum FactionDoctrine {
     HUNT,
     BURN,
     COMMAND,
-    AMBUSH,
-    PURGE;
+    AMBUSH;
 
     public static final Codec<FactionDoctrine> CODEC = Codec.STRING.xmap(
             value -> FactionDoctrine.valueOf(value.toUpperCase()),

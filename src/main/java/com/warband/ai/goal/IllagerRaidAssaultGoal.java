@@ -42,14 +42,33 @@ public final class IllagerRaidAssaultGoal extends SquadGoal {
             priority.addEffect(new MobEffectInstance(MobEffects.GLOWING, 80, 0, false, true));
             TacticalEffects.signal((ServerLevel) mob.level(), mob);
         }
-        if (role == Role.BRUISER || role == Role.SKIRMISHER || doctrine == FactionDoctrine.PURGE) {
+        if (role == Role.BRUISER || role == Role.SKIRMISHER) {
             mob.addEffect(new MobEffectInstance(MobEffects.SPEED, 80, doctrine == FactionDoctrine.HUNT ? 1 : 0, false, true));
         }
-        if (doctrine == FactionDoctrine.COMMAND && squad.members().size() >= 3) {
+        if (doctrine == FactionDoctrine.AMBUSH) {
+            // Brief but vicious ambush burst: speed II + strength on every squadmate.
+            mob.addEffect(new MobEffectInstance(MobEffects.SPEED, 80, 1, false, true));
+            mob.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 80, 0, false, true));
+        }
+        if (doctrine == FactionDoctrine.SIEGE && role == Role.BRUISER) {
+            // Heavy infantry that break the line: hit harder, take less.
+            mob.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 80, 0, false, true));
             mob.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 80, 0, false, true));
         }
-        if (doctrine == FactionDoctrine.BURN && priority instanceof Villager) {
-            priority.setRemainingFireTicks(Math.max(priority.getRemainingFireTicks(), 60));
+        if (doctrine == FactionDoctrine.COMMAND && squad.members().size() >= 2) {
+            // Organized force: every squadmate hits harder and the front line shrugs.
+            mob.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 80, 0, false, true));
+            if (role == Role.BRUISER || role == Role.LEADER) {
+                mob.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 80, 0, false, true));
+            }
+        }
+        if (doctrine == FactionDoctrine.BURN) {
+            if (priority instanceof Villager) {
+                priority.setRemainingFireTicks(Math.max(priority.getRemainingFireTicks(), 60));
+            } else if (role == Role.BRUISER || role == Role.SKIRMISHER) {
+                // Burn squad scorches whatever they engage, not just villagers.
+                priority.setRemainingFireTicks(Math.max(priority.getRemainingFireTicks(), 40));
+            }
         }
         if (role == Role.MARKSMAN || role == Role.SUPPORT || role == Role.LEADER) {
             return moveTo(priority.blockPosition().offset(

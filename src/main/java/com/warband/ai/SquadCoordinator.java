@@ -15,6 +15,7 @@ import com.warband.ai.goal.IllagerRaidAssaultGoal;
 import com.warband.ai.goal.InvestigateLastKnownGoal;
 import com.warband.ai.goal.KiteGoal;
 import com.warband.ai.goal.PhantomHarassGoal;
+import com.warband.ai.goal.SeekShelterGoal;
 import com.warband.ai.goal.PiglinSocialGoal;
 import com.warband.ai.goal.PressureUnreachableGoal;
 import com.warband.ai.goal.RegroupGoal;
@@ -410,6 +411,12 @@ public final class SquadCoordinator {
                 || data.hasTactic(Tactic.RAVAGER_BREAKER)
                 || data.hasTactic(Tactic.WARDEN_PRESSURE))) {
             accessor.warband$goalSelector().addGoal(3, new ExtendedMobTacticGoal(mob, squad));
+        }
+        // Universal across all stamped undead: when on fire from sunlight, run
+        // for shade. canUse() filters out sun-immune subclasses (husk, wither
+        // skeleton) by checking isOnFire.
+        if (mob instanceof Zombie || mob instanceof AbstractSkeleton) {
+            accessor.warband$goalSelector().addGoal(1, new SeekShelterGoal(mob));
         }
         mob.setAttached(WarbandAttachments.WARBAND_GOALS_BOUND, true);
     }

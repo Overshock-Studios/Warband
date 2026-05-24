@@ -15,7 +15,7 @@ Stat buffs in Warband are deliberately small, just enough to keep clever mobs re
 - **Smart awareness.** Mobs act on what they could plausibly know: sight, sound, squadmate reports, and the *cues you leave behind*. A missed arrow that thunks into the wall draws a squad's attention to where the shot came from; a solo smart mob may turn on you outright. If they lose track of you, they search your *last known position* so you can still outplay them.
 - **Tiered intelligence.** Simple mobs (basic zombies, spiders, slimes, hoglins) keep a blunt kit: follow the squad, regroup, call backup. Smarter mobs (drowned, skeletons, piglins, illagers, witches, blazes, endermen) get the full tactical kit and retreat when wounded.
 
-Every mob family brings its own trick: spider webs and sticky ground, skeleton smoke screens, creepers that stalk from the flank, zombie hordes that surround, blazes that hold the high air, witches that support the line, piglin morale, hoglin stampedes, phantom harassment, guardian and shulker pressure, ravager charges, warden discipline, and more. At high difficulty, creepers also have a chance to spawn naturally charged.
+Every mob family brings its own trick: spider webs and sticky ground, skeleton smoke screens, creepers that stalk from the flank, zombie hordes that surround, blazes that hold the high air, witches that support the line, piglin morale, hoglin stampedes, phantom harassment, guardian and shulker pressure, ravager charges, warden discipline, and more. At high difficulty, creepers also have a chance to spawn naturally charged. Sun-burning undead caught out at dawn run for the nearest shade instead of standing and burning. If you shoot endermen with an arrow, it reappears right in front of you, mad.
 
 ## The Illager War
 
@@ -23,7 +23,7 @@ Illagers are no longer a loose scatter of mobs, they're **factions**. Five of th
 
 - **Black Horn** (Hunt) vs. **Pale Axe** (Siege)
 - **Red Ledger** (Command) vs. **Ash Banner** (Burn)
-- **Iron Choir** (Purge), a zealot order with no peer, never intercepted by rivals and never intercepting others
+- **Iron Choir** (Ambush), a zealot order with no peer, never intercepted by rivals and never intercepting others
 
 - **Strongholds.** Woodland mansions and pillager outposts are faction seats. A mansion is a single faction's capital, defended by an elevated garrison and commanded by one **Warmarshal**, a named apex boss who is the *smartest* illager in the building, directing the fight from behind his line.
 - **Grudges.** Wound a notable illager and let it live, and it remembers. It musters its faction and comes back for you, returning to the very place it happened.

@@ -9,7 +9,7 @@ public enum IllagerFaction {
     RED_LEDGER("red_ledger", "Red Ledger", FactionDoctrine.COMMAND),
     PALE_AXE("pale_axe", "Pale Axe", FactionDoctrine.SIEGE),
     ASH_BANNER("ash_banner", "Ash Banner", FactionDoctrine.BURN),
-    IRON_CHOIR("iron_choir", "Iron Choir", FactionDoctrine.PURGE);
+    IRON_CHOIR("iron_choir", "Iron Choir", FactionDoctrine.AMBUSH);
 
     public static final Codec<IllagerFaction> CODEC = Codec.STRING.xmap(IllagerFaction::byId, IllagerFaction::id);
     private static final List<IllagerFaction> VALUES = List.of(values());

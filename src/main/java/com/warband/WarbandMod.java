@@ -1,6 +1,7 @@
 package com.warband;
 
 import com.warband.ally.GolemDirector;
+import com.warband.ai.EndermanProvokeHandler;
 import com.warband.ai.FriendlyFireHandler;
 import com.warband.command.WarbandCommand;
 import com.warband.ai.SquadCoordinator;
@@ -46,6 +47,7 @@ public final class WarbandMod implements ModInitializer {
         AntiFarmDirector.register();
         BossDirector.register();
         FriendlyFireHandler.register();
+        EndermanProvokeHandler.register();
         GoatHornCommand.register();
         SquadCoordinator.register();
         GolemDirector.register();

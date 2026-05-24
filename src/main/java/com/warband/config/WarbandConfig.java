@@ -92,6 +92,10 @@ public final class WarbandConfig {
     public static double experienceLeaderBonus = 0.15;
     public static boolean bossAbilitiesEnabled = true;
     public static boolean extendedMobTacticsEnabled = true;
+    /** Sun-burning undead seek the nearest shade instead of standing and burning. */
+    public static boolean seekShelterEnabled = true;
+    /** Endermen shot by a player teleport next to the shooter and aggro, instead of just dodging. */
+    public static boolean endermanProvokeEnabled = true;
 
     // ── Illagers ────────────────────────────────────────────────────────────
     public static boolean illagerFactionsEnabled = true;
@@ -183,6 +187,8 @@ public final class WarbandConfig {
         experienceLeaderBonus = parseDouble(props, "experienceLeaderBonus", experienceLeaderBonus, 0.0, 5.0, logger);
         bossAbilitiesEnabled = parseBoolean(props, "bossAbilitiesEnabled", bossAbilitiesEnabled, logger);
         extendedMobTacticsEnabled = parseBoolean(props, "extendedMobTacticsEnabled", extendedMobTacticsEnabled, logger);
+        seekShelterEnabled = parseBoolean(props, "seekShelterEnabled", seekShelterEnabled, logger);
+        endermanProvokeEnabled = parseBoolean(props, "endermanProvokeEnabled", endermanProvokeEnabled, logger);
 
         illagerFactionsEnabled = parseBoolean(props, "illagerFactionsEnabled", illagerFactionsEnabled, logger);
         illagerDoctrineEnabled = parseBoolean(props, "illagerDoctrineEnabled", illagerDoctrineEnabled, logger);
@@ -306,6 +312,10 @@ public final class WarbandConfig {
                 bossAbilitiesEnabled=%s
                 # If true, guardians, shulkers, ghasts, cave spiders, ravagers and wardens get Warband tactics.
                 extendedMobTacticsEnabled=%s
+                # If true, sun-burning undead seek the nearest shade instead of standing and burning.
+                seekShelterEnabled=%s
+                # If true, endermen shot by a player teleport next to the shooter and aggro.
+                endermanProvokeEnabled=%s
 
                 # ── Illagers ─────────────────────────────────────────────────────
                 # If true, illagers receive regional faction identity in names and grudge records.
@@ -389,6 +399,8 @@ public final class WarbandConfig {
                     experienceLeaderBonus,
                     bossAbilitiesEnabled,
                     extendedMobTacticsEnabled,
+                    seekShelterEnabled,
+                    endermanProvokeEnabled,
                     illagerFactionsEnabled,
                     illagerDoctrineEnabled,
                     illagerGrudgesEnabled,

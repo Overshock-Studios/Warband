@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.phys.AABB;
@@ -54,6 +55,8 @@ public final class ArrowPerception {
      */
     private static void alertSolo(Mob mob, Player shooter, float difficulty) {
         if (mob.getTarget() != null) return;
+        // Endermen still demand eye contact; a missed arrow doesn't provoke them.
+        if (mob instanceof EnderMan) return;
         if (difficulty < 0.20f) return;
         if (mob.getRandom().nextDouble() >= difficulty * 0.7) return;
         mob.setTarget(shooter);

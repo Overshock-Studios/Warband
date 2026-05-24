@@ -38,6 +38,17 @@ public final class IllagerDoctrineGoal extends SquadGoal {
         if (doctrine == FactionDoctrine.HUNT && distance > 10.0) {
             return moveTo(offsetAround(target, 7.0));
         }
+        // BURN markers/support push closer to ignite — fire wants to be near you.
+        if (doctrine == FactionDoctrine.BURN && (role == Role.MARKSMAN || role == Role.SUPPORT)
+                && distance > 7.0) {
+            return moveTo(offsetAround(target, 6.0));
+        }
+        // COMMAND holds a forward firing line — markers/leaders stand closer than
+        // the default hold-line distance, presenting an organized front.
+        if (doctrine == FactionDoctrine.COMMAND && (role == Role.MARKSMAN || role == Role.LEADER)
+                && distance > 8.0 && distance < 20.0) {
+            return moveTo(offsetAround(target, 8.0));
+        }
         return switch (role) {
             case LEADER, SUPPORT, MARKSMAN -> holdLine(target, distance, role);
             case SKIRMISHER -> flank(target, 8.0);
