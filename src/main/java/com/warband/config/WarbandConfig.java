@@ -13,7 +13,7 @@ import java.util.Properties;
 /**
  * File-backed config at {@code config/warband.properties}.
  *
- * <p>Written with {@link Files#writeString} from a text block — never
+ * <p>Written with {@link Files#writeString} from a text block, never
  * {@code Properties.store()} (timestamp + encoding noise on Windows).
  */
 public final class WarbandConfig {
@@ -56,9 +56,9 @@ public final class WarbandConfig {
     public static int maxSquadSize = 6;
     /** Extra squad slots allowed per additional player sharing the region. */
     public static int squadPlayerBonus = 2;
-    public static double naturalSquadChanceMin = 0.20;
-    public static double naturalSquadChanceMax = 0.60;
-    /** Performance cap — most "smart AI" mobs ticked per player at once. */
+    public static double naturalSquadChanceMin = 0.35;
+    public static double naturalSquadChanceMax = 0.80;
+    /** Performance cap, most "smart AI" mobs ticked per player at once. */
     public static int maxSmartMobsPerPlayer = 24;
     /** If true, spawned hostile mobs get difficulty-scaled stat buffs. */
     public static boolean statBuffsEnabled = true;

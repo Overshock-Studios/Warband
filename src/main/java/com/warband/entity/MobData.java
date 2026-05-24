@@ -8,7 +8,7 @@ import net.minecraft.world.entity.Entity;
  * Warband's per-mob state, stamped at spawn and carried for the mob's lifetime.
  *
  * <p>Attached to the entity via the Fabric Data Attachment API (see
- * {@link WarbandAttachments}) — entities cannot carry data components, which are
+ * {@link WarbandAttachments}), entities cannot carry data components, which are
  * item-stack-scoped. The attachment is persistent, so this survives save/load.
  *
  * @param difficulty the normalized {@code 0.0..1.0} difficulty at spawn
@@ -21,7 +21,7 @@ public record MobData(float difficulty, Role role, int squadId, int tactics) {
     /** Sentinel {@link #squadId} for a mob that belongs to no squad. */
     public static final int NO_SQUAD = -1;
 
-    /** Value returned for an unstamped mob — vanilla-calm, no squad. */
+    /** Value returned for an unstamped mob, vanilla-calm, no squad. */
     public static final MobData DEFAULT = new MobData(0.0f, Role.NONE, NO_SQUAD, 0);
 
     public static final Codec<MobData> CODEC = RecordCodecBuilder.create(instance -> instance.group(

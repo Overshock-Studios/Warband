@@ -12,7 +12,7 @@ import net.minecraft.world.entity.Mob;
  *
  * <p>Retreat is leashed: after {@link #LEASH_TICKS} of continuous fleeing the
  * mob commits and fights for {@link #COMMIT_TICKS}, so a wounded mob cannot flee
- * forever — the player still gets the kill.
+ * forever, the player still gets the kill.
  */
 public final class RetreatWhenLowGoal extends SquadGoal {
 
@@ -37,14 +37,14 @@ public final class RetreatWhenLowGoal extends SquadGoal {
             retreatingSince = -1;
             return false;
         }
-        if (mob.tickCount < commitUntil) return false; // committed — stand and fight
+        if (mob.tickCount < commitUntil) return false; // committed, stand and fight
         if (!decisionReady(20)) return false;
 
         if (retreatingSince < 0) {
             retreatingSince = mob.tickCount;
         }
         if (mob.tickCount - retreatingSince > LEASH_TICKS) {
-            // Fled long enough — commit, so the mob cannot kite away forever.
+            // Fled long enough, commit, so the mob cannot kite away forever.
             commitUntil = mob.tickCount + COMMIT_TICKS;
             retreatingSince = -1;
             return false;

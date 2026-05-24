@@ -15,15 +15,15 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 /**
- * Per-player capability score — the input to {@link DifficultyMode#SCORE}.
+ * Per-player capability score, the input to {@link DifficultyMode#SCORE}.
  *
  * <p>The score is a stored {@code 0.0..1.0} value, not a live reading. Each
  * second it is compared against a fresh capability <i>sample</i> (gear: worn
  * armor/toughness, strongest carried weapon) and updated:
  * <ul>
- *   <li><b>Ratchet up</b> — if the sample is higher, the score jumps to it at
+ *   <li><b>Ratchet up</b>, if the sample is higher, the score jumps to it at
  *       once; gearing up should register immediately.</li>
- *   <li><b>Decay down</b> — if the sample is lower, the score drifts toward it
+ *   <li><b>Decay down</b>, if the sample is lower, the score drifts toward it
  *       slowly (see {@code scoreDecayRate}).</li>
  * </ul>
  * This makes difficulty track durable capability: a transient sword-swap never
@@ -36,7 +36,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
  * failure state.
  *
  * <p>TODO: fold in a progression term (advancements earned) once Phase 3 adds a
- * reason to track it — gear alone underrates a skilled but lightly-equipped
+ * reason to track it, gear alone underrates a skilled but lightly-equipped
  * player.
  */
 public final class PlayerScore {

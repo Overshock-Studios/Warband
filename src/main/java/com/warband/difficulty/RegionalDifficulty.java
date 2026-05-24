@@ -1,6 +1,7 @@
 package com.warband.difficulty;
 
 import com.warband.config.WarbandConfig;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -20,29 +21,32 @@ import java.util.Map;
 public final class RegionalDifficulty {
 
     private static final int SAMPLE_INTERVAL_TICKS = 20 * 5;
+    private static final int SAVE_INTERVAL_TICKS = 20 * 60;
     private static final int EXPIRE_TICKS = 20 * 60 * 60;
     private static final String SAVE_FILE = "warband-regional-difficulty.csv";
     private static final Map<String, Map<Long, Cell>> BY_DIMENSION = new HashMap<>();
 
     private static int tickCounter;
-    private static boolean loaded;
+    private static int saveCounter;
 
     private RegionalDifficulty() {
     }
 
     public static void register() {
+        ServerLifecycleEvents.SERVER_STARTED.register(RegionalDifficulty::load);
+        ServerLifecycleEvents.SERVER_STOPPING.register(RegionalDifficulty::save);
+
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (!loaded) {
-                load(server);
-                loaded = true;
-            }
             if (++tickCounter < SAMPLE_INTERVAL_TICKS) return;
             tickCounter = 0;
 
             long now = server.overworld().getGameTime();
             sampleAll(server, now);
             decayAndTrim(now);
-            save(server);
+            if ((saveCounter += SAMPLE_INTERVAL_TICKS) >= SAVE_INTERVAL_TICKS) {
+                saveCounter = 0;
+                save(server);
+            }
         });
     }
 

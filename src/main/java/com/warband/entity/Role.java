@@ -6,13 +6,13 @@ import net.minecraft.util.StringRepresentable;
 /**
  * A mob's tactical role within a squad.
  *
- * <p>This enum only <i>names</i> the roles — the behaviour behind each is built
+ * <p>This enum only <i>names</i> the roles, the behaviour behind each is built
  * in Phase 3 (squad AI). {@link #NONE} is the default for a stamped-but-unsquadded
  * mob.
  */
 public enum Role implements StringRepresentable {
 
-    /** Not part of a squad — a lone stamped mob. */
+    /** Not part of a squad, a lone stamped mob. */
     NONE("none"),
 
     /** Closes distance, soaks hits. */

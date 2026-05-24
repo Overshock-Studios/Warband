@@ -75,11 +75,11 @@ public final class IllagerGrudgeSystem {
         }
         if (isGrudgeSpawned(mob)) return;
         // Only badly wounded illagers stir their comrades, and only the first such
-        // hit scans — the victim lands in PENDING below, so a drawn-out fight is
+        // hit scans, the victim lands in PENDING below, so a drawn-out fight is
         // not a per-swing entity scan.
         if (mob.getHealth() / mob.getMaxHealth() > 0.5f) return;
         if (PENDING.containsKey(mob.getUUID())) return;
-        // A mansion is a faction seat — the consequence lands on the kill (heat),
+        // A mansion is a faction seat, the consequence lands on the kill (heat),
         // handled in afterDeath; no field-style witness grudges here.
         if (inFactionSeat(mob)) return;
 
@@ -107,7 +107,7 @@ public final class IllagerGrudgeSystem {
         PENDING.remove(entity.getUUID());
     }
 
-    /** A slain Warmarshal breaks its faction — clears the killer's grudges and heat with it. */
+    /** A slain Warmarshal breaks its faction, clears the killer's grudges and heat with it. */
     private static void handleWarmarshalDeath(LivingEntity entity, DamageSource source) {
         if (!(entity instanceof Mob mob)) return;
         if (!Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.WARMARSHAL))) return;
@@ -116,10 +116,10 @@ public final class IllagerGrudgeSystem {
         IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
         clearFaction(player, faction);
         player.sendSystemMessage(Component.literal(
-                "The " + faction.displayName() + " falls into disarray — its Warmarshal is dead."));
+                "The " + faction.displayName() + " falls into disarray, its Warmarshal is dead."));
     }
 
-    /** Wipe a faction's grudges and reputation from a player — its war with them is over. */
+    /** Wipe a faction's grudges and reputation from a player, its war with them is over. */
     private static void clearFaction(ServerPlayer player, IllagerFaction faction) {
         List<IllagerGrudge> grudges = new ArrayList<>(grudges(player));
         if (grudges.removeIf(grudge -> grudge.faction() == faction)) {
@@ -147,7 +147,7 @@ public final class IllagerGrudgeSystem {
                         && IllagerInvasionCompat.isIllagerLike(mob)
                         && !isGrudgeSpawned(mob)
                         // Only notable illagers (leaders / high-tier) form grudges,
-                        // so the one that "returns" is a distinct enemy — decoupled
+                        // so the one that "returns" is a distinct enemy, decoupled
                         // from nametag visibility, which is now hover-only.
                         && isNotable(mob)
                         && (includeVictim || mob != victim)
@@ -187,7 +187,7 @@ public final class IllagerGrudgeSystem {
             PendingSurvivor pending = iterator.next().getValue();
             if (now < pending.confirmAt) continue;
 
-            // The witness was not killed inside the confirm window — it got away.
+            // The witness was not killed inside the confirm window, it got away.
             // Form the grudge on the timer alone; do NOT require the mob to still
             // be loaded. (afterDeath removes killed witnesses from PENDING, and a
             // chunk unload would otherwise silently drop every grudge.)
@@ -218,7 +218,7 @@ public final class IllagerGrudgeSystem {
         player.setAttached(WarbandAttachments.ILLAGER_GRUDGES, trim(grudges));
         addReputation(player, survivor.faction, 20, readyAt + BOUNTY_RETRY_TICKS);
         player.sendSystemMessage(Component.literal(
-                survivor.name + " slipped away — the " + survivor.faction.displayName()
+                survivor.name + " slipped away, the " + survivor.faction.displayName()
                         + " will remember this."));
     }
 
@@ -352,7 +352,7 @@ public final class IllagerGrudgeSystem {
         hunter.setCustomNameVisible(true);
         hunter.setTarget(player);
         // A relentless hunter, not a damage sponge: Speed to stay on the player
-        // and Strength to bite — no Resistance. Its difficulty comes from the
+        // and Strength to bite, no Resistance. Its difficulty comes from the
         // squad AI and the chase, not from soaking hits. Lasts one encounter.
         int buffTicks = 20 * 60 * 2;
         hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SPEED, buffTicks, 1, false, true));
@@ -366,7 +366,7 @@ public final class IllagerGrudgeSystem {
                                                     BlockPos origin, double difficulty, List<Mob> patrol) {
         if (!WarbandConfig.illagerRivalriesEnabled || !WarbandConfig.illagerFactionsEnabled) return;
         if (patrol.isEmpty()) return;
-        // No rival pile-on at evoker tier — that revenge patrol is already a handful.
+        // No rival pile-on at evoker tier, that revenge patrol is already a handful.
         if (difficulty >= 0.85) return;
         if (player.getRandom().nextInt(100) >= RIVAL_INTERCEPT_CHANCE) return;
 
@@ -381,7 +381,7 @@ public final class IllagerGrudgeSystem {
             if (mob == null) continue;
             IllagerFactionSystem.setFaction(mob, rival);
             markGrudgeSpawned(mob);
-            // Rivals intercept the revenge patrol, not the player — a genuine
+            // Rivals intercept the revenge patrol, not the player, a genuine
             // third party the player can turn to their advantage.
             mob.setTarget(patrol.get(player.getRandom().nextInt(patrol.size())));
             spawned.add(mob);
@@ -407,7 +407,7 @@ public final class IllagerGrudgeSystem {
      * Where a revenge patrol musters: near the grudge's recorded origin when the
      * player is still close to it (revenge returns to the scene), otherwise near
      * the player as a fallback. Origin is a plain coordinate, so this works with
-     * any pillager structure — vanilla or modded.
+     * any pillager structure, vanilla or modded.
      */
     private static BlockPos findRevengeSpawn(ServerLevel level, ServerPlayer player, IllagerGrudge grudge) {
         if (grudge.hasOrigin() && grudge.originDimension().equals(level.dimension().toString())) {

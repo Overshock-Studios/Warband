@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The single source of truth for local difficulty.
  *
- * <p>Everything else — stat buffs, AI tier, squad size, spawn pacing — reads one
+ * <p>Everything else, stat buffs, AI tier, squad size, spawn pacing, reads one
  * normalized scalar from here: {@code 0.0} is vanilla-calm, {@code 1.0} is
  * maximum. Keep it that way; one scalar in, many systems out. The intent is also
  * to stamp this value onto each mob (see {@link com.warband.entity.MobData}) at
@@ -48,14 +48,16 @@ public final class DifficultyManager {
                     * WarbandConfig.vanillaRegionalDifficultyWeight;
             value = Math.max(value, vanillaFloor);
         }
+        // Apply dimension bonus before the global ceiling so Easy/Normal actually
+        // constrain dimensional pressure, otherwise the End sat at 1.0 regardless.
+        value += dimensionBonus(level);
         if (WarbandConfig.respectGlobalDifficulty) {
             value *= globalCeiling(global);
         }
-        value += dimensionBonus(level);
         return clamp01(value);
     }
 
-    /** Per-dimension additive pressure — the Nether and End are inherently harsher. */
+    /** Per-dimension additive pressure, the Nether and End are inherently harsher. */
     private static double dimensionBonus(ServerLevel level) {
         if (level.dimension().equals(Level.NETHER)) {
             return WarbandConfig.netherDifficultyBonus;
@@ -75,7 +77,11 @@ public final class DifficultyManager {
     }
 
     private static double distanceDifficulty(ServerLevel level, BlockPos pos) {
-        BlockPos spawn = level.getRespawnData().pos();
+        // Always anchor distance to overworld spawn; Nether/End "respawn data" is
+        // not meaningful as a world origin, and the player's mental map is
+        // overworld-rooted regardless of where they are.
+        ServerLevel overworld = level.getServer() != null ? level.getServer().overworld() : level;
+        BlockPos spawn = overworld.getRespawnData().pos();
         double dx = pos.getX() - spawn.getX();
         double dz = pos.getZ() - spawn.getZ();
         double dist = Math.sqrt(dx * dx + dz * dz);

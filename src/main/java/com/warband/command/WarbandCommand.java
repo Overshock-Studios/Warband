@@ -131,7 +131,7 @@ public final class WarbandCommand {
 
         double health = zombie.getMaxHealth();
         source.sendSuccess(() -> Component.literal(String.format(
-                "[Warband] Spawned zombie at difficulty %.2f — max health %.1f (vanilla 20.0)",
+                "[Warband] Spawned zombie at difficulty %.2f, max health %.1f (vanilla 20.0)",
                 difficulty, health)), false);
         return 1;
     }
@@ -206,7 +206,7 @@ public final class WarbandCommand {
         int fSquadded = squadded;
         int activeSquads = SquadCoordinator.activeSquads();
         source.sendSuccess(() -> Component.literal(String.format(
-                "[Warband] %d stamped mob(s) nearby — %d in squads, %d active squad(s) — difficulty min %.2f / avg %.2f / max %.2f",
+                "[Warband] %d stamped mob(s) nearby, %d in squads, %d active squad(s), difficulty min %.2f / avg %.2f / max %.2f",
                 count, fSquadded, activeSquads, fMin, avg, fMax)), false);
         return count;
     }

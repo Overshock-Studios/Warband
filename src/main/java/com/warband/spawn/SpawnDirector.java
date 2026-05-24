@@ -19,28 +19,31 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.ServerLevelAccessor;
 
 import java.util.EnumSet;
 
 /**
- * Spawn director — stamps difficulty onto naturally-spawned hostile mobs and
+ * Spawn director, stamps difficulty onto naturally-spawned hostile mobs and
  * applies difficulty-scaled stat buffs.
  *
  * <p>The hook is {@code Mob#finalizeSpawn}, intercepted by
  * {@code com.warband.mixin.MobFinalizeSpawnMixin}, which calls
  * {@link #onMobFinalizeSpawn}.
  *
- * <p>Scope note: the "managed mob" set is {@link Enemy} (hostile mobs) — an
+ * <p>Scope note: the "managed mob" set is {@link Enemy} (hostile mobs), an
  * honest middle ground between a brittle explicit type list and "everything".
  *
- * <p>TODO (Phase 2b): wave/lull pacing — an L4D-style AI Director. Tactical
+ * <p>TODO (Phase 2b): wave/lull pacing, an L4D-style AI Director. Tactical
  * squad assignment is Phase 3 and is delegated to {@link SquadCoordinator}.
  */
 public final class SpawnDirector {
@@ -132,7 +135,7 @@ public final class SpawnDirector {
     }
 
     /**
-     * Crown a stamped illager as its mansion's Warmarshal — the faction's apex.
+     * Crown a stamped illager as its mansion's Warmarshal, the faction's apex.
      * Deliberately outranks a bounty hunter: forced to maximum difficulty, given
      * a heavy boss health/damage layer and lasting Strength, and renamed.
      */
@@ -140,7 +143,7 @@ public final class SpawnDirector {
         // The command-AI upgrade: guarantees command goals and squad leadership,
         // and sets the mob's MobData (difficulty 1.0, LEADER, ILLAGER_COMMAND).
         // A Warmarshal is the smartest illager in the garrison, not just the
-        // strongest — without this it would be the bounty-hunter mistake again.
+        // strongest, without this it would be the bounty-hunter mistake again.
         SquadCoordinator.makeCommander(mob, 1.0);
         if (WarbandConfig.statBuffsEnabled) {
             addMultiplied(mob, Attributes.MAX_HEALTH, WARMARSHAL_HEALTH, WarbandConfig.warmarshalHealthBonus);
@@ -148,7 +151,7 @@ public final class SpawnDirector {
             mob.setHealth(mob.getMaxHealth());
         }
         // Strength, not Resistance: a Warmarshal is hard through health, damage,
-        // its garrison and AI — never a damage sponge.
+        // its garrison and AI, never a damage sponge.
         mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                 net.minecraft.world.effect.MobEffects.STRENGTH, 20 * 60 * 60, 1, false, true));
         mob.setAttached(WarbandAttachments.WARMARSHAL, true);
@@ -157,14 +160,37 @@ public final class SpawnDirector {
 
     private static void applyStatBuffs(Mob mob, double difficulty) {
         // Linear in difficulty: tactical AI switches on at ~0.25, so enhanced mobs
-        // need real durability through the mid-game — not a back-loaded square curve.
+        // need real durability through the mid-game, not a back-loaded square curve.
         double statScale = difficulty;
         addMultiplied(mob, Attributes.MAX_HEALTH, HEALTH_MOD, statScale * WarbandConfig.statHealthBonusMax);
         addMultiplied(mob, Attributes.ATTACK_DAMAGE, DAMAGE_MOD, statScale * WarbandConfig.statDamageBonusMax);
         addMultiplied(mob, Attributes.MOVEMENT_SPEED, SPEED_MOD, statScale * WarbandConfig.statSpeedBonusMax);
         addFlat(mob, Attributes.KNOCKBACK_RESISTANCE, KNOCKBACK_MOD, statScale * WarbandConfig.statKnockbackResistanceMax);
-        // Health was modified above — refill so the mob spawns at its new maximum.
+        // Health was modified above, refill so the mob spawns at its new maximum.
         mob.setHealth(mob.getMaxHealth());
+        maybeChargeCreeper(mob, difficulty);
+    }
+
+    /**
+     * High-difficulty creepers have a chance to spawn naturally charged, the
+     * difficulty band's spectacle reward. Implemented via a visual-only lightning
+     * bolt + direct thunderHit so the world doesn't catch fire or take damage.
+     */
+    private static void maybeChargeCreeper(Mob mob, double difficulty) {
+        if (!(mob instanceof Creeper creeper)) return;
+        if (creeper.isPowered()) return;
+        if (difficulty < 0.55) return;
+        if (!(creeper.level() instanceof ServerLevel level)) return;
+        // Ramps from 0% at diff 0.55 to ~30% at diff 1.0.
+        double chance = (difficulty - 0.55) * 0.67;
+        if (creeper.getRandom().nextDouble() >= chance) return;
+
+        LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(level, EntitySpawnReason.EVENT);
+        if (bolt == null) return;
+        bolt.snapTo(creeper.getX(), creeper.getY(), creeper.getZ());
+        bolt.setVisualOnly(true);
+        level.addFreshEntity(bolt);
+        creeper.thunderHit(level, bolt);
     }
 
     private static void stampIllagerIdentityOnly(Mob mob, double difficulty) {

@@ -72,13 +72,22 @@ public final class Squad {
         return backupCooldown <= 0;
     }
 
-    /** True while the squad is routing — the leader recently fell. */
+    /** True while the squad is routing, the leader recently fell. */
     public boolean isRouting() {
         return routTicks > 0;
     }
 
     public void markBackupCalled() {
         backupCooldown = BACKUP_COOLDOWN_TICKS;
+    }
+
+    /**
+     * External perception cue (e.g. a missed arrow). Seeds the squad's
+     * last-known position so its InvestigateLastKnownGoal moves them to look.
+     */
+    public void alertTo(BlockPos pos) {
+        lastKnownPos = pos;
+        lastKnownTicks = LAST_KNOWN_TICKS;
     }
 
     public void add(Mob mob) {
@@ -133,7 +142,7 @@ public final class Squad {
                 break;
             }
         }
-        // The leader just fell — the squad routs for a window, then steadies and
+        // The leader just fell, the squad routs for a window, then steadies and
         // re-engages (demoralized). A temporary break, not a permanent flee.
         if (hadLeader && !leaderAlive) {
             routTicks = ROUT_TICKS;

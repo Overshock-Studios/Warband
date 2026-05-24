@@ -41,7 +41,7 @@ public final class IllagerFactionSystem {
     private static IllagerFaction chooseFaction(Mob mob) {
         IllagerFaction raidFaction = nearbyRaidFaction(mob);
         if (raidFaction != null) return raidFaction;
-        // A whole mansion or outpost resolves to one faction — its stronghold.
+        // A whole mansion or outpost resolves to one faction, its stronghold.
         if (mob.level() instanceof ServerLevel level) {
             Integer strongholdSeed = StructureCompat.strongholdSeed(level, mob.blockPosition());
             if (strongholdSeed != null) {

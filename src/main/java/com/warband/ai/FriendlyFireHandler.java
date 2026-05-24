@@ -30,19 +30,29 @@ public final class FriendlyFireHandler {
             Entity attacker = source.getEntity();
             if (!(entity instanceof Mob victim) || !(attacker instanceof Mob attackerMob)) return true;
             if (BossDirector.isWitherMinionFriendly(victim, attackerMob)) {
-                victim.setTarget(null);
-                attackerMob.setTarget(null);
+                clearIfIntentional(victim, attackerMob, source.getDirectEntity());
                 return false;
             }
             if (!MobData.isStamped(victim) || !MobData.isStamped(attackerMob)) return true;
 
             if (sameSquad(victim, attackerMob) || sameWarbandFamily(victim, attackerMob)) {
-                victim.setTarget(null);
-                attackerMob.setTarget(null);
+                clearIfIntentional(victim, attackerMob, source.getDirectEntity());
                 return false;
             }
             return true;
         });
+    }
+
+    /**
+     * Only drop targets when the attacker actually meant to hit the victim, i.e.
+     * a direct melee swing at its current target. Splash/projectile collateral
+     * shouldn't make both mobs forget the player they were chasing.
+     */
+    private static void clearIfIntentional(Mob victim, Mob attacker, Entity direct) {
+        if (direct == attacker && attacker.getTarget() == victim) {
+            victim.setTarget(null);
+            attacker.setTarget(null);
+        }
     }
 
     private static boolean sameSquad(Mob a, Mob b) {

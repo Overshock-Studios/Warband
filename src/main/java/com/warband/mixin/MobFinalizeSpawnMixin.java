@@ -12,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Hooks {@link Mob#finalizeSpawn} — the choke point every natural spawn passes
- * through — to hand the mob to the {@link SpawnDirector} for difficulty stamping
+ * Hooks {@link Mob#finalizeSpawn}, the choke point every natural spawn passes
+ * through, to hand the mob to the {@link SpawnDirector} for difficulty stamping
  * and stat buffs.
  */
 @Mixin(Mob.class)

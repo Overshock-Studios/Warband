@@ -61,7 +61,7 @@ public final class IllagerIdentity {
 
     private static String rank(Role role, double difficulty) {
         if (role == Role.LEADER) {
-            // "Warmarshal" is not auto-assigned — it is a single per-stronghold
+            // "Warmarshal" is not auto-assigned, it is a single per-stronghold
             // title granted by StrongholdGarrison via promoteToWarmarshal.
             if (difficulty >= 0.65) return "Captain";
             return "Sergeant";

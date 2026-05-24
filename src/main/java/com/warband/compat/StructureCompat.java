@@ -15,12 +15,12 @@ import org.jetbrains.annotations.Nullable;
  * Detects illager strongholds by <b>structure tag</b>, never by hardcoded
  * structure id. Vanilla structures are listed in the tag files shipped with the
  * mod; structure mods opt their own mansions/outposts in by adding to the same
- * tags. A modded pillager structure that opts into neither still works fine —
+ * tags. A modded pillager structure that opts into neither still works fine ,
  * it just uses the generic origin-anchoring instead of stronghold treatment.
  */
 public final class StructureCompat {
 
-    /** Mansion-tier faction capitals — {@code data/warband/tags/worldgen/structure/faction_seats.json}. */
+    /** Mansion-tier faction capitals, {@code data/warband/tags/worldgen/structure/faction_seats.json}. */
     public static final TagKey<Structure> FACTION_SEATS = TagKey.create(
             Registries.STRUCTURE, Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "faction_seats"));
 

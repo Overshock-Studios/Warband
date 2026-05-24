@@ -51,7 +51,7 @@ public final class EncounterDirector {
             case PEAK -> 1.0;
             case RELAX -> WarbandConfig.directorRelaxEnhancementChance;
         };
-        // More players sharing the region raise the enhancement rate — volume,
+        // More players sharing the region raise the enhancement rate, volume,
         // not per-mob intensity (which the difficulty scalar caps at 1.0).
         if (chance < 1.0) {
             chance += WarbandConfig.encounterPlayerBonus * extraNearbyPlayers(level, pos);

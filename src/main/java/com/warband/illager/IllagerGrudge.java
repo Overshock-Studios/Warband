@@ -8,7 +8,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  *
  * <p>{@code originPos}/{@code originDimension} record where the original fight
  * happened, so revenge can muster from that place rather than teleporting near
- * the player. They are plain coordinates — no structure lookup — so this works
+ * the player. They are plain coordinates, no structure lookup, so this works
  * with any pillager structure, vanilla or modded.
  */
 public record IllagerGrudge(String survivorName, IllagerFaction faction, float difficulty,

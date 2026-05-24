@@ -36,8 +36,11 @@ import com.warband.entity.Role;
 import com.warband.entity.Tactic;
 import com.warband.mixin.MobGoalSelectorAccessor;
 import com.warband.spawn.SpawnDirector;
+import com.warband.entity.WarbandAttachments;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -68,8 +71,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -82,14 +85,19 @@ import java.util.Map;
  */
 public final class SquadCoordinator {
 
-    private static final Map<Integer, Squad> SQUADS = new LinkedHashMap<>();
+    private static final Map<Integer, Squad> SQUADS = new HashMap<>();
     private static final double JOIN_RADIUS = 18.0;
     private static final double BACKUP_RADIUS = 32.0;
     private static final double SMART_SCAN_RADIUS = 96.0;
-    /** Below this difficulty a mob fights to the death — only smarter mobs retreat. */
-    private static final double RETREAT_MIN_DIFFICULTY = 0.5;
+    /** Below this difficulty a mob fights to the death, only smarter mobs retreat. */
+    private static final double RETREAT_MIN_DIFFICULTY = 0.35;
+    /** Tactical-AI threshold, below this a mob stays vanilla. */
+    private static final double SMART_MIN_DIFFICULTY = 0.20;
+    /** Difficulty needed to crown a leader. */
+    private static final double LEADER_MIN_DIFFICULTY = 0.40;
     private static int nextSquadId = 1;
     private static boolean spawningSquadmate;
+    private static int squadTickCounter;
 
     private SquadCoordinator() {
     }
@@ -97,6 +105,8 @@ public final class SquadCoordinator {
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (!WarbandConfig.squadsEnabled) return;
+            if (++squadTickCounter < 2) return;
+            squadTickCounter = 0;
 
             Iterator<Squad> iterator = SQUADS.values().iterator();
             while (iterator.hasNext()) {
@@ -107,6 +117,36 @@ public final class SquadCoordinator {
                 }
             }
         });
+
+        // Re-attach goals to mobs loaded from disk. finalizeSpawn → ENTITY_LOAD
+        // for fresh spawns, so the marker is already set and we skip.
+        ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
+            if (!WarbandConfig.squadsEnabled) return;
+            if (!(entity instanceof Mob mob)) return;
+            if (!MobData.isStamped(mob)) return;
+            if (Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.WARBAND_GOALS_BOUND))) return;
+
+            MobData data = MobData.get(mob);
+            int squadId = data.squadId();
+            Squad squad;
+            if (squadId != MobData.NO_SQUAD) {
+                Squad existing = SQUADS.get(squadId);
+                squad = existing != null ? existing : new Squad(squadId, level);
+                if (existing == null) SQUADS.put(squadId, squad);
+                if (squadId >= nextSquadId) nextSquadId = squadId + 1;
+                squad.add(mob);
+            } else {
+                squad = new Squad(MobData.NO_SQUAD, level);
+            }
+            addGoals(mob, squad, data.role());
+        });
+    }
+
+    private static boolean hasWarbandGoals(Mob mob) {
+        for (WrappedGoal wrapped : ((MobGoalSelectorAccessor) mob).warband$goalSelector().getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof WarbandGoal) return true;
+        }
+        return false;
     }
 
     /**
@@ -118,7 +158,7 @@ public final class SquadCoordinator {
     }
 
     public static boolean assignNaturalSpawn(Mob mob, double difficulty, boolean spawnFormation) {
-        if (!WarbandConfig.squadsEnabled || difficulty < 0.25 || !underSmartCap((ServerLevel) mob.level(), mob)) {
+        if (!WarbandConfig.squadsEnabled || difficulty < SMART_MIN_DIFFICULTY || !underSmartCap((ServerLevel) mob.level(), mob)) {
             return false;
         }
         if (!isSmartEligible(mob)) {
@@ -214,7 +254,7 @@ public final class SquadCoordinator {
         int tactics = MobData.get(mob).tactics() | Tactic.ILLAGER_COMMAND.bit();
         MobData.set(mob, new MobData((float) difficulty, Role.LEADER, squad.id(), tactics));
         addGoals(mob, squad, Role.LEADER);
-        // A commander directs from behind the line — kite, never facetank.
+        // A commander directs from behind the line, kite, never facetank.
         ((MobGoalSelectorAccessor) mob).warband$goalSelector().addGoal(2, new KiteGoal(mob, squad));
         squad.add(mob);
     }
@@ -231,20 +271,22 @@ public final class SquadCoordinator {
                     && (!data.inSquad() || !isActiveSquad(data.squadId()));
         });
 
-        int joined = 0;
-        int max = Math.min(1, cap - squad.members().size());
+        // Only one backup mob per call, drip-feed, never a flood.
+        if (candidates.isEmpty()) return false;
         double difficulty = squad.members().isEmpty() ? 0.5 : MobData.get(squad.members().getFirst()).difficulty();
-        for (Mob mob : candidates) {
-            if (joined >= max) break;
-            Role role = chooseRole(mob, squad.members().size(), difficulty);
-            addMob(squad, mob, role, Math.max(difficulty, MobData.get(mob).difficulty()));
-            joined++;
-        }
-        return joined > 0;
+        Mob recruit = candidates.getFirst();
+        Role role = chooseRole(recruit, squad.members().size(), difficulty);
+        addMob(squad, recruit, role, Math.max(difficulty, MobData.get(recruit).difficulty()));
+        return true;
     }
 
     public static int activeSquads() {
         return SQUADS.size();
+    }
+
+    /** Lookup for perception hooks (e.g. arrow-miss alerts). */
+    public static Squad getSquad(int id) {
+        return SQUADS.get(id);
     }
 
     private static final double SQUAD_REGION_RADIUS = 64.0;
@@ -252,7 +294,7 @@ public final class SquadCoordinator {
 
     /**
      * Squad-size cap, raised above {@code maxSquadSize} for players sharing the
-     * region. Multiplayer scales encounter <i>volume</i> here — the per-mob
+     * region. Multiplayer scales encounter <i>volume</i> here, the per-mob
      * difficulty scalar still caps at 1.0.
      */
     private static int effectiveMaxSquadSize(ServerLevel level, BlockPos near) {
@@ -285,8 +327,9 @@ public final class SquadCoordinator {
             accessor.warband$targetSelector().addGoal(0, new SquadTargetGoal(mob, squad));
         }
 
+        boolean simple = isSimpleFamily(mob);
         if (role != Role.NONE) {
-            if (MobData.get(mob).difficulty() >= RETREAT_MIN_DIFFICULTY) {
+            if (!simple && MobData.get(mob).difficulty() >= RETREAT_MIN_DIFFICULTY) {
                 accessor.warband$goalSelector().addGoal(2, new RetreatWhenLowGoal(mob, squad));
             }
             accessor.warband$goalSelector().addGoal(3, new RegroupGoal(mob, squad));
@@ -295,11 +338,16 @@ public final class SquadCoordinator {
             }
             accessor.warband$goalSelector().addGoal(6, new InvestigateLastKnownGoal(mob, squad));
 
-            if (role == Role.SKIRMISHER || role == Role.MARKSMAN || role == Role.SUPPORT) {
-                accessor.warband$goalSelector().addGoal(2, new KiteGoal(mob, squad));
-                accessor.warband$goalSelector().addGoal(3, new BreakLosGoal(mob, squad));
-            } else {
-                accessor.warband$goalSelector().addGoal(5, new FlankGoal(mob, squad));
+            // Simple-family mobs (basic zombies, spiders, slimes, hoglins) follow
+            // the squad target and regroup, but skip the more nuanced kite/flank
+            // behaviors, those belong to smarter mobs.
+            if (!simple) {
+                if (role == Role.SKIRMISHER || role == Role.MARKSMAN || role == Role.SUPPORT) {
+                    accessor.warband$goalSelector().addGoal(2, new KiteGoal(mob, squad));
+                    accessor.warband$goalSelector().addGoal(3, new BreakLosGoal(mob, squad));
+                } else {
+                    accessor.warband$goalSelector().addGoal(5, new FlankGoal(mob, squad));
+                }
             }
         }
 
@@ -363,6 +411,23 @@ public final class SquadCoordinator {
                 || data.hasTactic(Tactic.WARDEN_PRESSURE))) {
             accessor.warband$goalSelector().addGoal(3, new ExtendedMobTacticGoal(mob, squad));
         }
+        mob.setAttached(WarbandAttachments.WARBAND_GOALS_BOUND, true);
+    }
+
+    /**
+     * The "simple" family: mobs whose AI we keep deliberately blunt, they follow
+     * the squad target, regroup, and (if applicable) call backup, but skip kite,
+     * flank, breakLOS, and retreat. Smarter mobs (skeletons, drowned, piglins,
+     * illagers, witches, blazes, endermen) get the full kit.
+     */
+    private static boolean isSimpleFamily(Mob mob) {
+        if (mob instanceof Drowned) return false;
+        return mob instanceof Zombie
+                || mob instanceof Spider
+                || mob instanceof Slime
+                || mob instanceof MagmaCube
+                || mob instanceof Hoglin
+                || mob instanceof Zoglin;
     }
 
     private static void spawnNaturalSquadmates(Squad squad, Mob anchor, double difficulty) {
@@ -405,7 +470,7 @@ public final class SquadCoordinator {
     private static Squad nearestJoinableSquad(ServerLevel level, BlockPos pos, Mob mob) {
         int cap = effectiveMaxSquadSize(level, pos);
         Squad best = null;
-        double bestDist = 10.0 * 10.0;
+        double bestDist = JOIN_RADIUS * JOIN_RADIUS;
         for (Squad squad : SQUADS.values()) {
             if (squad.level() != level || squad.members().size() >= cap) continue;
             if (squad.members().isEmpty() || !sameSquadFamily(squad.members().getFirst(), mob)) continue;
@@ -420,12 +485,13 @@ public final class SquadCoordinator {
 
     private static Role chooseRole(Mob mob, int index, double difficulty) {
         if (RaidCompat.isPatrolCaptain(mob)) return Role.LEADER;
-        if (index == 0 && difficulty >= 0.45) return Role.LEADER;
+        if (index == 0 && difficulty >= LEADER_MIN_DIFFICULTY) return Role.LEADER;
+        // Consolidated roles: SUPPORT only when a compat layer flags it (e.g. witches
+        // in illager invasions); MARKSMAN for anything ranged; otherwise BRUISER.
+        // SKIRMISHER is no longer assigned procedurally, its kit collapses into
+        // MARKSMAN, which shares the same kite/breakLOS goal block.
         if (IllagerInvasionCompat.isSupport(mob)) return Role.SUPPORT;
-        if (IllagerInvasionCompat.isSkirmisher(mob)) return Role.SKIRMISHER;
         if (mob instanceof RangedAttackMob) return Role.MARKSMAN;
-        if (IllagerInvasionCompat.isBruiser(mob)) return Role.BRUISER;
-        if (difficulty >= 0.55 && index % 3 == 2) return Role.SKIRMISHER;
         return Role.BRUISER;
     }
 
@@ -471,12 +537,13 @@ public final class SquadCoordinator {
     }
 
     private static boolean shouldJoinExisting(Mob mob, double difficulty) {
-        if (!canCallBackup(mob) || difficulty < 0.50) return false;
-        return mob.getRandom().nextFloat() < 0.25f;
+        if (!canCallBackup(mob) || difficulty < 0.35) return false;
+        return mob.getRandom().nextFloat() < 0.45f;
     }
 
     private static double squadChance(double difficulty) {
-        double t = Math.max(0.0, Math.min(1.0, (difficulty - 0.25) / 0.65));
+        // Ramp faster: full-strength chance hits at diff ~0.70 (was 0.90).
+        double t = Math.max(0.0, Math.min(1.0, (difficulty - SMART_MIN_DIFFICULTY) / 0.50));
         return WarbandConfig.naturalSquadChanceMin
                 + (WarbandConfig.naturalSquadChanceMax - WarbandConfig.naturalSquadChanceMin) * t;
     }

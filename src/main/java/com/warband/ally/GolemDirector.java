@@ -3,8 +3,8 @@ package com.warband.ally;
 import com.warband.WarbandMod;
 import com.warband.ai.goal.GolemDefendGoal;
 import com.warband.ai.goal.GolemSpinGoal;
-import com.warband.ai.goal.WarbandGoal;
 import com.warband.difficulty.DifficultyManager;
+import com.warband.entity.WarbandAttachments;
 import com.warband.mixin.MobGoalSelectorAccessor;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.Holder;
@@ -61,10 +61,18 @@ public final class GolemDirector {
         }
 
         for (AbstractGolem golem : golems) {
+            if (Boolean.TRUE.equals(golem.getAttached(WarbandAttachments.GOLEM_ENHANCED))) continue;
             double difficulty = DifficultyManager.getDifficulty(level, golem.blockPosition());
             if (difficulty < 0.20) continue;
+            float healthBefore = golem.getMaxHealth();
             enhance(golem, difficulty);
+            // Top up only on first enhancement, by the amount the cap grew.
+            float gain = golem.getMaxHealth() - healthBefore;
+            if (gain > 0.0f) {
+                golem.setHealth(Math.min(golem.getMaxHealth(), golem.getHealth() + gain));
+            }
             injectGoal((Mob) golem);
+            golem.setAttached(WarbandAttachments.GOLEM_ENHANCED, true);
         }
     }
 
@@ -80,13 +88,10 @@ public final class GolemDirector {
             addFlat(golem, Attributes.ARMOR, ARMOR_MOD, difficulty * 6.0);
             addMultiplied(golem, Attributes.FOLLOW_RANGE, FOLLOW_RANGE_MOD, difficulty * 0.75);
         }
-        golem.setHealth(Math.max(golem.getHealth(), golem.getMaxHealth() * 0.65f));
     }
 
     private static void injectGoal(Mob golem) {
         MobGoalSelectorAccessor accessor = (MobGoalSelectorAccessor) golem;
-        accessor.warband$goalSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
-        accessor.warband$targetSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
         accessor.warband$targetSelector().addGoal(0, new GolemDefendGoal(golem));
         if (golem instanceof IronGolem ironGolem) {
             accessor.warband$goalSelector().addGoal(1, new GolemSpinGoal(ironGolem));

@@ -54,6 +54,8 @@ public final class AntiFarmDirector {
 
     private static void inspect(ServerLevel level, Mob mob) {
         if (mob.getTarget() != null) return;
+        // Already maxed out, no more crowd scans on this mob.
+        if (farmTier(mob) >= 3) return;
         AABB crowdBox = AABB.ofSize(mob.position(), 8.0, 4.0, 8.0);
         List<Mob> crowd = level.getEntitiesOfClass(Mob.class, crowdBox, other ->
                 other.isAlive() && other.getType() == mob.getType());
@@ -83,9 +85,8 @@ public final class AntiFarmDirector {
     }
 
     private static int updateSuspicion(Mob mob, int candidateTier) {
-        int current = mob.getAttached(WarbandAttachments.FARM_SUSPICION) != null
-                ? mob.getAttached(WarbandAttachments.FARM_SUSPICION)
-                : 0;
+        Integer stored = mob.getAttached(WarbandAttachments.FARM_SUSPICION);
+        int current = stored != null ? stored : 0;
         int updated = candidateTier <= 0 ? Math.max(0, current - 1) : Math.min(6, current + 1);
         mob.setAttached(WarbandAttachments.FARM_SUSPICION, updated);
         return updated;

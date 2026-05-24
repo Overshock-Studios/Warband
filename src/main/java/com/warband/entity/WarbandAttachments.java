@@ -19,7 +19,7 @@ import net.minecraft.resources.Identifier;
 public final class WarbandAttachments {
 
     /**
-     * Per-mob {@link MobData}, stamped at spawn. Persistent — survives save/load.
+     * Per-mob {@link MobData}, stamped at spawn. Persistent, survives save/load.
      * Not copied on death: mobs do not respawn.
      */
     public static final AttachmentType<MobData> MOB_DATA = AttachmentRegistry.create(
@@ -75,8 +75,18 @@ public final class WarbandAttachments {
             builder -> builder.persistent(Codec.BOOL)
     );
 
+    /** Transient marker: this mob already has its Warband AI goals attached. */
+    public static final AttachmentType<Boolean> WARBAND_GOALS_BOUND = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "warband_goals_bound")
+    );
+
+    /** Transient marker: this golem already received its difficulty enhancements + goals. */
+    public static final AttachmentType<Boolean> GOLEM_ENHANCED = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "golem_enhanced")
+    );
+
     /**
-     * On a player: their capability score ({@code 0.0..1.0}) — the input to
+     * On a player: their capability score ({@code 0.0..1.0}), the input to
      * SCORE-mode difficulty. Ratchets up instantly, decays down slowly; see
      * {@code com.warband.difficulty.PlayerScore}. Persistent and copied across
      * death so difficulty stays consistent session to session.
@@ -88,7 +98,7 @@ public final class WarbandAttachments {
 
     /**
      * On a player: the game-time tick until which post-death difficulty relief
-     * applies. Absent when no relief is active. Not persistent — relief lapsing
+     * applies. Absent when no relief is active. Not persistent, relief lapsing
      * on logout is acceptable.
      */
     public static final AttachmentType<Long> DEATH_RELIEF = AttachmentRegistry.create(
@@ -112,6 +122,6 @@ public final class WarbandAttachments {
 
     /** Touch this class so its attachments register. Called from {@code onInitialize}. */
     public static void init() {
-        // Intentionally empty — referencing the class triggers static init above.
+        // Intentionally empty, referencing the class triggers static init above.
     }
 }

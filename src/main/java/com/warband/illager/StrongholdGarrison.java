@@ -19,7 +19,7 @@ import java.util.Set;
  * illagers spawn as an elevated garrison rather than scattered mobs.
  *
  * <p>A mansion's evokers and vindicators are placed straight from the structure
- * template as saved entities — they never pass through {@code Mob#finalizeSpawn},
+ * template as saved entities, they never pass through {@code Mob#finalizeSpawn},
  * so {@code SpawnDirector}'s mixin misses them. This catches them on entity load
  * instead. Naturally-spawned stronghold illagers (outpost pillagers) are handled
  * by {@code SpawnDirector} via {@link #floorFor}.
@@ -45,13 +45,13 @@ public final class StrongholdGarrison {
                     : StructureCompat.inFactionCamp(level, pos) ? WarbandConfig.outpostGarrisonFloor : 0.0;
             if (floor <= 0.0) return;
 
-            // Organize existing garrison residents into squads — spawnFormation
+            // Organize existing garrison residents into squads, spawnFormation
             // is false so a mansion is not multiplied, only coordinated.
             if (!SquadCoordinator.assignNaturalSpawn(mob, floor, false)) {
                 SpawnDirector.stamp(mob, floor);
             }
 
-            // Exactly one Warmarshal per mansion — the first garrison illager to
+            // Exactly one Warmarshal per mansion, the first garrison illager to
             // muster claims the title; every other leader stays a Captain.
             if (seat) {
                 Integer seed = StructureCompat.strongholdSeed(level, pos);
@@ -63,8 +63,8 @@ public final class StrongholdGarrison {
     }
 
     /**
-     * Difficulty floor for the stronghold containing {@code pos} — the mansion
-     * or outpost garrison level — or {@code 0.0} if it is not in a stronghold.
+     * Difficulty floor for the stronghold containing {@code pos}, the mansion
+     * or outpost garrison level, or {@code 0.0} if it is not in a stronghold.
      */
     public static double floorFor(ServerLevel level, BlockPos pos) {
         if (!WarbandConfig.illagerStrongholdsEnabled) return 0.0;

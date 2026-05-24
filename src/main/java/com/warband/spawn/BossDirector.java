@@ -17,6 +17,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.entity.boss.enderdragon.phases.DragonChargePlayerPhase;
+import net.minecraft.world.entity.boss.enderdragon.phases.DragonStrafePlayerPhase;
+import net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.skeleton.WitherSkeleton;
 import net.minecraft.world.entity.player.Player;
@@ -40,7 +43,15 @@ public final class BossDirector {
     private static final Map<UUID, UUID> WITHER_MINION_OWNER = new HashMap<>();
     private static final Map<UUID, BossFightState> WITHER_STATE = new HashMap<>();
     private static final Map<UUID, BossFightState> DRAGON_STATE = new HashMap<>();
-    private static final double BOSS_DIFFICULTY = 1.0;
+    /** Boss ability intensity, derived from vanilla difficulty. Peaceful = 0 (abilities skipped). */
+    private static double bossIntensity(ServerLevel level) {
+        return switch (level.getDifficulty()) {
+            case PEACEFUL -> 0.0;
+            case EASY -> 0.6;
+            case NORMAL -> 0.85;
+            case HARD -> 1.0;
+        };
+    }
     private static int tickCounter;
     private static boolean spawningWitherMinion;
     private static final int WITHER_SPAWN_GRACE_TICKS = 20 * 18;
@@ -51,17 +62,30 @@ public final class BossDirector {
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (!WarbandConfig.bossAbilitiesEnabled) return;
+            if (!PENDING_BLINKS.isEmpty()) {
+                for (ServerLevel level : server.getAllLevels()) {
+                    for (Map.Entry<UUID, PendingBlink> entry : PENDING_BLINKS.entrySet()) {
+                        PendingBlink pending = entry.getValue();
+                        if (!pending.dimension().equals(level.dimension())) continue;
+                        if (!(level.getEntity(entry.getKey()) instanceof EnderDragon dragon) || !dragon.isAlive()) continue;
+                        dragon.setPos(pending.freezeAt().x, pending.freezeAt().y, pending.freezeAt().z);
+                        dragon.setDeltaMovement(Vec3.ZERO);
+                    }
+                }
+            }
             if (++tickCounter < 10) return;
             tickCounter = 0;
 
             for (ServerLevel level : server.getAllLevels()) {
+                double intensity = bossIntensity(level);
+                if (intensity <= 0.0) continue;
                 AABB active = activePlayerBounds(level);
                 if (active == null) continue;
                 for (WitherBoss wither : level.getEntitiesOfClass(WitherBoss.class, active, WitherBoss::isAlive)) {
-                    tickWither(level, wither);
+                    tickWither(level, wither, intensity);
                 }
                 for (EnderDragon dragon : level.getEntitiesOfClass(EnderDragon.class, active, EnderDragon::isAlive)) {
-                    tickDragon(level, dragon);
+                    tickDragon(level, dragon, intensity);
                 }
                 resolvePendingBlinks(level);
             }
@@ -80,7 +104,7 @@ public final class BossDirector {
         return spawningWitherMinion;
     }
 
-    private static void tickWither(ServerLevel level, WitherBoss wither) {
+    private static void tickWither(ServerLevel level, WitherBoss wither, double intensity) {
         long now = level.getGameTime();
         LivingEntity target = nearestTarget(level, wither.position(), 96.0);
         if (target == null) return;
@@ -92,7 +116,7 @@ public final class BossDirector {
                 && wither.getHealth() <= wither.getMaxHealth() * 0.5f) {
             WITHER_STATE.put(wither.getUUID(), BossFightState.PHASE_TWO);
             wither.setAttached(WarbandAttachments.BOSS_PHASE_TRIGGERED, true);
-            witherNova(level, wither);
+            witherNova(level, wither, intensity);
             summonWitherSkeletons(level, wither, target, 4);
             NEXT_WITHER_ATTACK.put(wither.getUUID(), now + 80);
             return;
@@ -104,7 +128,7 @@ public final class BossDirector {
                 && wither.getHealth() <= wither.getMaxHealth() * 0.18f) {
             WITHER_STATE.put(wither.getUUID(), BossFightState.LAST_STAND);
             wither.setAttached(WarbandAttachments.BOSS_LAST_STAND_TRIGGERED, true);
-            witherLastStand(level, wither, target);
+            witherLastStand(level, wither, target, intensity);
             NEXT_WITHER_ATTACK.put(wither.getUUID(), now + 60);
             return;
         }
@@ -114,13 +138,13 @@ public final class BossDirector {
         NEXT_WITHER_ATTACK.put(wither.getUUID(), now + 120 + wither.getRandom().nextInt(80));
 
         if (wither.getRandom().nextBoolean()) {
-            witherDash(level, wither, target);
+            witherDash(level, wither, target, intensity);
         } else {
             skullBarrage(level, wither, target.position(), 8, 0.9);
         }
     }
 
-    private static void witherNova(ServerLevel level, WitherBoss wither) {
+    private static void witherNova(ServerLevel level, WitherBoss wither, double intensity) {
         Vec3 center = wither.position();
         level.playSound(null, center.x, center.y, center.z, SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 2.0f, 0.8f);
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y + 1.0, center.z, 3, 0.4, 0.4, 0.4, 0.0);
@@ -131,7 +155,7 @@ public final class BossDirector {
                 entity -> entity != wither && entity.isAlive() && !isMinionOf(entity, wither));
         for (LivingEntity victim : victims) {
             double distance = Math.max(1.0, victim.distanceTo(wither));
-            float damage = (float) Math.max(5.0, (18.0 - distance) * BOSS_DIFFICULTY);
+            float damage = (float) Math.max(3.0, (18.0 - distance) * intensity);
             victim.hurtServer(level, wither.damageSources().mobAttack(wither), damage);
             victim.addEffect(new MobEffectInstance(MobEffects.WITHER, 20 * 8, 1, false, true));
             Vec3 shove = victim.position().subtract(center).normalize().scale(1.35).add(0.0, 0.65, 0.0);
@@ -141,7 +165,7 @@ public final class BossDirector {
         skullBarrage(level, wither, center, 16, 1.0);
     }
 
-    private static void witherDash(ServerLevel level, WitherBoss wither, LivingEntity target) {
+    private static void witherDash(ServerLevel level, WitherBoss wither, LivingEntity target, double intensity) {
         Vec3 direction = target.position().subtract(wither.position()).normalize();
         wither.setDeltaMovement(direction.scale(1.35).add(0.0, 0.25, 0.0));
         level.playSound(null, wither.getX(), wither.getY(), wither.getZ(), SoundEvents.WITHER_SHOOT, SoundSource.HOSTILE, 1.4f, 0.65f);
@@ -151,12 +175,12 @@ public final class BossDirector {
         AABB hitbox = AABB.ofSize(impactCenter, 6.0, 5.0, 6.0);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, hitbox,
                 entity -> entity != wither && entity.isAlive() && !isMinionOf(entity, wither))) {
-            victim.hurtServer(level, wither.damageSources().mobAttack(wither), (float) (10.0 * BOSS_DIFFICULTY));
+            victim.hurtServer(level, wither.damageSources().mobAttack(wither), (float) (10.0 * intensity));
             victim.addEffect(new MobEffectInstance(MobEffects.WITHER, 20 * 5, 0, false, true));
         }
     }
 
-    private static void witherLastStand(ServerLevel level, WitherBoss wither, LivingEntity target) {
+    private static void witherLastStand(ServerLevel level, WitherBoss wither, LivingEntity target, double intensity) {
         Vec3 center = wither.position();
         level.playSound(null, center.x, center.y, center.z, SoundEvents.WITHER_AMBIENT, SoundSource.HOSTILE, 2.0f, 0.45f);
         level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1.2f, 0.55f);
@@ -181,7 +205,7 @@ public final class BossDirector {
         }
 
         skullBarrage(level, wither, focus, 12, 1.05);
-        witherDash(level, wither, target);
+        witherDash(level, wither, target, intensity);
     }
 
     private static void skullBarrage(ServerLevel level, WitherBoss wither, Vec3 focus, int count, double speed) {
@@ -230,14 +254,24 @@ public final class BossDirector {
         return entity instanceof Mob mob && wither.getUUID().equals(WITHER_MINION_OWNER.get(mob.getUUID()));
     }
 
-    private static void tickDragon(ServerLevel level, EnderDragon dragon) {
+    private static void tickDragon(ServerLevel level, EnderDragon dragon, double intensity) {
         long now = level.getGameTime();
-        LivingEntity target = nearestTarget(level, dragon.position(), 192.0);
+        LivingEntity target = nearestTarget(level, dragon.position(), 64.0);
         if (target == null) return;
         BossFightState state = dragonState(dragon);
 
         long next = NEXT_DRAGON_ATTACK.getOrDefault(dragon.getUUID(), 0L);
-        if (now < next) return;
+        if (now < next) {
+            EnderDragonPhase<?> current = dragon.getPhaseManager().getCurrentPhase().getPhase();
+            if (current == EnderDragonPhase.HOLDING_PATTERN) {
+                dragon.getPhaseManager().setPhase(EnderDragonPhase.STRAFE_PLAYER);
+                DragonStrafePlayerPhase strafe = dragon.getPhaseManager().getPhase(EnderDragonPhase.STRAFE_PLAYER);
+                if (strafe != null) {
+                    strafe.setTarget(target);
+                }
+            }
+            return;
+        }
         if (state != BossFightState.LAST_STAND && dragon.getHealth() <= dragon.getMaxHealth() * 0.25f) {
             DRAGON_STATE.put(dragon.getUUID(), BossFightState.LAST_STAND);
             state = BossFightState.LAST_STAND;
@@ -258,11 +292,11 @@ public final class BossDirector {
 
         int roll = dragon.getRandom().nextInt(state == BossFightState.OPENING ? 3 : 4);
         if (roll <= 1) {
-            dragonCharge(level, dragon, target);
+            dragonCharge(level, dragon, target, intensity);
         } else if (roll == 2) {
-            dragonEnderGale(level, dragon, target);
+            dragonEnderGale(level, dragon, target, intensity);
         } else {
-            dragonBreathLine(level, dragon, target);
+            dragonBreathLine(level, dragon, target, intensity);
         }
     }
 
@@ -272,7 +306,7 @@ public final class BossDirector {
         Vec3 destination = new Vec3(behind.x, Math.max(level.getMinY() + 16.0, behind.y), behind.z);
 
         long now = level.getGameTime();
-        PENDING_BLINKS.put(dragon.getUUID(), new PendingBlink(level.dimension(), now + 34, destination, target.getUUID()));
+        PENDING_BLINKS.put(dragon.getUUID(), new PendingBlink(level.dimension(), now + 34, destination, target.getUUID(), origin));
         NEXT_DRAGON_BLINK.put(dragon.getUUID(), now + 20 * 45L + dragon.getRandom().nextInt(20 * 25));
         NEXT_DRAGON_ATTACK.put(dragon.getUUID(), now + 80);
 
@@ -316,35 +350,46 @@ public final class BossDirector {
         });
     }
 
-    private static void dragonCharge(ServerLevel level, EnderDragon dragon, LivingEntity target) {
+    private static void dragonCharge(ServerLevel level, EnderDragon dragon, LivingEntity target, double intensity) {
         Vec3 direction = target.position().subtract(dragon.position()).normalize();
+        dragon.getPhaseManager().setPhase(EnderDragonPhase.CHARGING_PLAYER);
+        DragonChargePlayerPhase charge = dragon.getPhaseManager().getPhase(EnderDragonPhase.CHARGING_PLAYER);
+        if (charge != null) {
+            charge.setTarget(target.position());
+        }
         dragon.setDeltaMovement(direction.scale(1.65).add(0.0, -0.05, 0.0));
         level.playSound(null, dragon.getX(), dragon.getY(), dragon.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 1.7f, 0.8f);
         level.sendParticles(ParticleTypes.PORTAL, dragon.getX(), dragon.getY() + 2.0, dragon.getZ(), 45, 2.0, 1.0, 2.0, 0.08);
 
         AABB impact = AABB.ofSize(target.position(), 9.0, 6.0, 9.0);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, impact, entity -> entity != dragon && entity.isAlive())) {
-            victim.hurtServer(level, dragon.damageSources().mobAttack(dragon), 12.0f);
+            victim.hurtServer(level, dragon.damageSources().mobAttack(dragon), (float) (12.0 * intensity));
             victim.setDeltaMovement(victim.getDeltaMovement().add(direction.scale(1.2)).add(0.0, 0.45, 0.0));
         }
     }
 
-    private static void dragonBreathLine(ServerLevel level, EnderDragon dragon, LivingEntity target) {
+    private static void dragonBreathLine(ServerLevel level, EnderDragon dragon, LivingEntity target, double intensity) {
         Vec3 start = dragon.position().add(0.0, 2.0, 0.0);
+        double distanceToTarget = target.position().distanceTo(start);
+        if (distanceToTarget > 32.0) {
+            dragonCharge(level, dragon, target, intensity);
+            return;
+        }
+        int maxRange = (int) Math.min(28.0, distanceToTarget + 4.0);
         Vec3 direction = target.position().subtract(start).normalize();
         level.playSound(null, dragon.getX(), dragon.getY(), dragon.getZ(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 1.5f, 0.9f);
 
-        for (int i = 2; i <= 28; i += 2) {
+        for (int i = 2; i <= maxRange; i += 2) {
             Vec3 point = start.add(direction.scale(i));
             level.sendParticles(ParticleTypes.WITCH, point.x, point.y, point.z, 12, 1.2, 0.6, 1.2, 0.04);
             AABB cloud = AABB.ofSize(point, 4.0, 3.0, 4.0);
             for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, cloud, entity -> entity != dragon && entity.isAlive())) {
-                victim.hurtServer(level, dragon.damageSources().magic(), 4.0f);
+                victim.hurtServer(level, dragon.damageSources().magic(), (float) (4.0 * intensity));
             }
         }
     }
 
-    private static void dragonEnderGale(ServerLevel level, EnderDragon dragon, LivingEntity target) {
+    private static void dragonEnderGale(ServerLevel level, EnderDragon dragon, LivingEntity target, double intensity) {
         Vec3 center = target.position();
         level.playSound(null, center.x, center.y, center.z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.HOSTILE, 1.8f, 0.65f);
         level.playSound(null, center.x, center.y, center.z, SoundEvents.ENDERMAN_STARE, SoundSource.HOSTILE, 0.9f, 0.8f);
@@ -366,7 +411,7 @@ public final class BossDirector {
             Vec3 motion = pull.normalize().scale(Math.min(1.1, 4.0 / distance)).add(0.0, 0.35, 0.0);
             victim.setDeltaMovement(victim.getDeltaMovement().add(motion));
             if (distance < 4.0) {
-                victim.hurtServer(level, dragon.damageSources().magic(), 5.0f);
+                victim.hurtServer(level, dragon.damageSources().magic(), (float) (5.0 * intensity));
             }
         }
     }
@@ -426,6 +471,6 @@ public final class BossDirector {
         LAST_STAND
     }
 
-    private record PendingBlink(net.minecraft.resources.ResourceKey<Level> dimension, long executeAt, Vec3 destination, UUID targetId) {
+    private record PendingBlink(net.minecraft.resources.ResourceKey<Level> dimension, long executeAt, Vec3 destination, UUID targetId, Vec3 freezeAt) {
     }
 }
