@@ -3,7 +3,7 @@
   "id": "warband",
   "version": "${version}",
   "name": "Warband",
-  "description": "Vanilla mob AI and spawning overhaul. Difficulty scales with distance from spawn (or time / player score). Standard overworld, Nether, and End mobs spawn in squads with combat roles and fight tactically.",
+  "description": "A mob AI and spawning overhaul where the world fights back with strategy. Mobs spawn in role-based squads (Bruiser, Marksman, Support, Leader) with real tactics: flank, kite, break line of sight, regroup, call backup, investigate last-known positions, retreat when wounded. Difficulty scales by regional player capability (or distance from spawn), grows in the Nether and End, and respects vanilla difficulty. Illagers form five rival factions with named ranks, Warmarshal apex bosses, grudges, bounty hunters, and stronghold garrisons. The Wither and Ender Dragon gain Warband phase abilities scaled to vanilla difficulty.",
   "authors": [
     "Divesh Gupta"
   ],
