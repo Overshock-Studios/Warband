@@ -36,13 +36,18 @@ public enum IllagerFaction {
         return doctrine;
     }
 
+    /**
+     * Mutual rival pairings: Black Horn ↔ Pale Axe, Red Ledger ↔ Ash Banner.
+     * Iron Choir is a zealot order with no peer, so they rival themselves and
+     * never participate in rival-intercept patrols (callers must guard for self).
+     */
     public IllagerFaction rival() {
         return switch (this) {
             case BLACK_HORN -> PALE_AXE;
             case PALE_AXE -> BLACK_HORN;
             case RED_LEDGER -> ASH_BANNER;
             case ASH_BANNER -> RED_LEDGER;
-            case IRON_CHOIR -> BLACK_HORN;
+            case IRON_CHOIR -> IRON_CHOIR;
         };
     }
 

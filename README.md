@@ -19,7 +19,11 @@ Every mob family brings its own trick: spider webs and sticky ground, skeleton s
 
 ## The Illager War
 
-Illagers are no longer a loose scatter of mobs, they're **factions**. Five of them, each with its own doctrine, banners, named ranks, and rivals.
+Illagers are no longer a loose scatter of mobs, they're **factions**. Five of them, each with its own doctrine, banners, named ranks, and rivals:
+
+- **Black Horn** (Hunt) vs. **Pale Axe** (Siege)
+- **Red Ledger** (Command) vs. **Ash Banner** (Burn)
+- **Iron Choir** (Purge), a zealot order with no peer, never intercepted by rivals and never intercepting others
 
 - **Strongholds.** Woodland mansions and pillager outposts are faction seats. A mansion is a single faction's capital, defended by an elevated garrison and commanded by one **Warmarshal**, a named apex boss who is the *smartest* illager in the building, directing the fight from behind his line.
 - **Grudges.** Wound a notable illager and let it live, and it remembers. It musters its faction and comes back for you, returning to the very place it happened.

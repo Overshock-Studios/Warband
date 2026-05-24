@@ -372,6 +372,8 @@ public final class IllagerGrudgeSystem {
 
         ServerLevel level = (ServerLevel) player.level();
         IllagerFaction rival = grudge.faction().rival();
+        // Self-rival factions (zealot orders) don't get intercepted.
+        if (rival == grudge.faction()) return;
         double rivalDifficulty = Math.max(0.45, difficulty - 0.10);
         List<Mob> spawned = new ArrayList<>();
         int size = 1 + player.getRandom().nextInt(2);
