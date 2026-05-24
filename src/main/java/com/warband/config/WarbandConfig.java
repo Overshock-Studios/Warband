@@ -78,8 +78,6 @@ public final class WarbandConfig {
     public static double directorBuildUpEnhancementChance = 0.70;
     public static double directorRelaxEnhancementChance = 0.15;
     public static boolean roleVisualsEnabled = true;
-    /** If true, squadded vanilla mobs get visible custom names like "Bruiser Zombie". */
-    public static boolean roleNamesEnabled = false;
     public static boolean roleCuesEnabled = true;
     public static boolean antiFarmEnabled = true;
     public static int antiFarmCrowdThreshold = 10;
@@ -174,7 +172,6 @@ public final class WarbandConfig {
         directorBuildUpEnhancementChance = parseDouble(props, "directorBuildUpEnhancementChance", directorBuildUpEnhancementChance, 0.0, 1.0, logger);
         directorRelaxEnhancementChance = parseDouble(props, "directorRelaxEnhancementChance", directorRelaxEnhancementChance, 0.0, 1.0, logger);
         roleVisualsEnabled = parseBoolean(props, "roleVisualsEnabled", roleVisualsEnabled, logger);
-        roleNamesEnabled = parseBoolean(props, "roleNamesEnabled", roleNamesEnabled, logger);
         roleCuesEnabled = parseBoolean(props, "roleCuesEnabled", roleCuesEnabled, logger);
         antiFarmEnabled = parseBoolean(props, "antiFarmEnabled", antiFarmEnabled, logger);
         antiFarmCrowdThreshold = parseInt(props, "antiFarmCrowdThreshold", antiFarmCrowdThreshold, 3, 128, logger);
@@ -291,8 +288,6 @@ public final class WarbandConfig {
                 directorRelaxEnhancementChance=%s
                 # If true, squadded mobs get visible role silhouettes/equipment.
                 roleVisualsEnabled=%s
-                # If true, squadded vanilla mobs get visible custom names like "Bruiser Zombie".
-                roleNamesEnabled=%s
                 # If true, role assignment plays a restrained vanilla mob cue.
                 roleCuesEnabled=%s
                 # If true, trapped/crowded farm mobs suppress drops and try to escape.
@@ -386,7 +381,6 @@ public final class WarbandConfig {
                     directorBuildUpEnhancementChance,
                     directorRelaxEnhancementChance,
                     roleVisualsEnabled,
-                    roleNamesEnabled,
                     roleCuesEnabled,
                     antiFarmEnabled,
                     antiFarmCrowdThreshold,

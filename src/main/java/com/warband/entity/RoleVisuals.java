@@ -6,7 +6,6 @@ import com.warband.compat.IllagerInvasionCompat;
 import com.warband.config.WarbandConfig;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -32,7 +31,8 @@ public final class RoleVisuals {
     public static void apply(Mob mob, Role role, double difficulty) {
         if (role == Role.NONE) return;
 
-        applyRoleName(mob, role, difficulty);
+        // Only illagers get named (via IllagerIdentity). Generic mobs stay anonymous;
+        // their role reads through visuals (gear, scale) and behavior, not a label.
         TacticalEffects.roleCue(mob, role);
         if (!WarbandConfig.roleVisualsEnabled) return;
         applyScale(mob, role);
@@ -66,24 +66,6 @@ public final class RoleVisuals {
             case NONE -> {
             }
         }
-    }
-
-    private static void applyRoleName(Mob mob, Role role, double difficulty) {
-        if (!WarbandConfig.roleNamesEnabled || mob.hasCustomName() || IllagerInvasionCompat.isIllagerLike(mob)) return;
-        if (role != Role.LEADER && difficulty < 0.75) return;
-        mob.setCustomName(Component.literal(displayName(role) + " " + mob.getType().getDescription().getString()));
-        mob.setCustomNameVisible(true);
-    }
-
-    private static String displayName(Role role) {
-        return switch (role) {
-            case BRUISER -> "Bruiser";
-            case SKIRMISHER -> "Flanker";
-            case MARKSMAN -> "Marksman";
-            case SUPPORT -> "Support";
-            case LEADER -> "Leader";
-            case NONE -> "";
-        };
     }
 
     private static void applyScale(Mob mob, Role role) {
