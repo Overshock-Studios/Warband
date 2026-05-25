@@ -63,7 +63,7 @@ public final class WarbandConfig {
     /** Extra squad slots allowed per additional player sharing the region. */
     public static int squadPlayerBonus = 2;
     public static double naturalSquadChanceMin = 0.35;
-    public static double naturalSquadChanceMax = 0.80;
+    public static double naturalSquadChanceMax = 0.60;
     /** Performance cap, most "smart AI" mobs ticked per player at once. */
     public static int maxSmartMobsPerPlayer = 24;
     /** If true, spawned hostile mobs get difficulty-scaled stat buffs. */
