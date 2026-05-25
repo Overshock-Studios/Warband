@@ -4,8 +4,7 @@ public enum ConfigProfile {
     CUSTOM,
     SOFT,
     BALANCED,
-    BRUTAL,
-    COOP;
+    BRUTAL;
 
     public static ConfigProfile fromString(String raw, ConfigProfile fallback) {
         if (raw == null || raw.isBlank()) return fallback;

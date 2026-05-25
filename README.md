@@ -14,6 +14,7 @@ Stat buffs in Warband are deliberately small, just enough to keep clever mobs re
 - **Real tactics.** They flank, break line of sight around terrain, search last-known positions when they lose you, regroup, pressure unreachable players, and call measured reinforcements.
 - **Smart awareness.** Mobs act on what they could plausibly know: sight, sound, squadmate reports, and the *cues you leave behind*. A missed arrow that thunks into the wall draws a squad's attention to where the shot came from; a solo smart mob may turn on you outright. If they lose track of you, they search your *last known position* so you can still outplay them.
 - **Tiered intelligence.** Simple mobs (basic zombies, spiders, slimes, hoglins) keep a blunt kit: follow the squad, regroup, call backup. Smarter mobs (drowned, skeletons, piglins, illagers, witches, blazes, endermen) get the full tactical kit and retreat when wounded.
+- **Multiplayer-aware pressure.** In co-op fights, squads track player threat, avoid dogpiling one target forever, share limited last-known-position intel with nearby squads, and scale their smart-mob budget by combat area instead of blindly multiplying every mob.
 
 Every mob family brings its own trick: spider webs and sticky ground, skeleton smoke screens, creepers that stalk from the flank, zombie hordes that surround, blazes that hold the high air, witches that support the line, piglin morale, hoglin stampedes, phantom harassment, guardian and shulker pressure, ravager charges, warden discipline, and more. At high difficulty, creepers also have a chance to spawn naturally charged. Sun-burning undead caught out at dawn run for the nearest shade instead of standing and burning. If you shoot endermen with an arrow, it reappears right in front of you, mad.
 
@@ -29,16 +30,27 @@ Illagers are no longer a loose scatter of mobs, they're **factions**. Five of th
 - **Grudges.** Wound a notable illager and let it live, and it remembers. It musters its faction and comes back for you, returning to the very place it happened.
 - **Bounty hunters.** Anger a faction enough and it puts a price on you: a relentless elite enforcer picks up your trail.
 - **Rivalries.** A revenge patrol can be intercepted by a rival faction, a three-way fight you can turn to your advantage.
+- **Group consequences.** Nearby players who participate in a stronghold or field fight can share faction heat, grudges, and revenge-party scaling.
 
 
 ## Difficulty
 
 One difficulty scalar drives everything, and you choose how it's derived:
 
-- **Regional** (default). Difficulty follows a running memory of player capability in chunks, backed by vanilla regional difficulty. More players in an area raises the threat.
+- **Regional** (default). Difficulty follows a running memory of player capability in chunks, backed by vanilla regional difficulty. More players in an area raises the threat. Regional pressure uses timers: sustained presence is required before a cell rises, and decay waits after players leave so co-op fights do not flicker between states.
 - **Distance.** Classic: the further from world spawn, the harder. Distance is always measured from overworld spawn, including in the Nether and End.
 
 Warband respects your vanilla difficulty setting (Peaceful turns it off entirely; Easy and Normal lower its ceiling), can optionally ease off after death, and treats the Nether and End as inherently harsher.
+
+## Multiplayer
+
+Warband is designed for shared servers, not just solo worlds. The multiplayer director adds:
+
+- threat memory per squad, so damage dealers draw attention without permanently trapping one player under the whole squad
+- local smart-mob budgets that scale by nearby active players
+- death mercy areas that briefly reduce encounter pressure near a recent player death
+- shared squad intel in a limited radius, so nearby squads can react to the same fight without global x-ray knowledge
+- profile-aware multiplayer tuning, so `SOFT`, `BALANCED`, and `BRUTAL` adjust both solo and co-op pressure
 
 ## The world isn't helpless
 
@@ -50,7 +62,7 @@ The Wither and Ender Dragon gain Warband phase abilities, warning effects, and l
 
 Obvious mob-farm conditions trigger anti-farm behavior: trapped crowds try to escape, then stop paying loot and XP if the farm remains abusive.
 
-Warband is server-side. Use `/warband difficulty`, `/warband region`, `/warband mobs`, and `/warband intel` to inspect local threat, the regional difficulty map, stamped mobs, and illager faction state. OP debug tools can spawn test mobs, squads, and revenge parties.
+Warband is server-side. Use `/warband difficulty`, `/warband region`, `/warband mobs`, `/warband mobdebug`, `/warband players`, `/warband squads`, `/warband encounter`, and `/warband intel` to inspect local threat, regional memory, stamped mobs, tactics, multiplayer budgets, active squads, and illager faction state. OP debug tools can spawn test mobs, squads, and revenge parties.
 
 ## Compatibility
 
@@ -61,7 +73,7 @@ Warband is server-side. Use `/warband difficulty`, `/warband region`, `/warband 
 
 ## Configuration
 
-Everything is tunable in `config/warband.properties`: difficulty mode and curves, config profiles, squad sizes, stat-buff strength, encounter pacing, role visuals/names/cues, anti-farm tiers, XP scaling, boss abilities, extended mob tactics, goat horn behavior, and every illager subsystem.
+Everything is tunable in `config/warband.properties`: difficulty mode and regional timers, config profiles, squad sizes, multiplayer budgets and death mercy, stat-buff strength, encounter pacing, disabled tactic lists, debug tactic logs, role visuals/names/cues, anti-farm tiers, XP scaling, boss abilities, extended mob tactics, goat horn behavior, and every illager subsystem.
 
 ---
 

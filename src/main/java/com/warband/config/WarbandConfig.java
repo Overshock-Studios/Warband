@@ -525,6 +525,10 @@ public final class WarbandConfig {
                 statHealthBonusMax = 0.20;
                 statDamageBonusMax = 0.12;
                 maxSmartMobsPerPlayer = 16;
+                multiplayerSmartMobsPerExtraPlayer = 6;
+                multiplayerEncounterBonusPerExtraPlayer = 0.06;
+                multiplayerDeathMercySeconds = 75;
+                multiplayerDogpilePenalty = 28.0;
                 antiFarmTier1Crowd = 12;
                 antiFarmTier2Crowd = 20;
                 antiFarmTier3Crowd = 32;
@@ -534,6 +538,10 @@ public final class WarbandConfig {
                 statHealthBonusMax = 0.35;
                 statDamageBonusMax = 0.20;
                 maxSmartMobsPerPlayer = 24;
+                multiplayerSmartMobsPerExtraPlayer = 8;
+                multiplayerEncounterBonusPerExtraPlayer = 0.12;
+                multiplayerDeathMercySeconds = 45;
+                multiplayerDogpilePenalty = 18.0;
                 antiFarmTier1Crowd = 8;
                 antiFarmTier2Crowd = 14;
                 antiFarmTier3Crowd = 22;
@@ -543,19 +551,13 @@ public final class WarbandConfig {
                 statHealthBonusMax = 0.45;
                 statDamageBonusMax = 0.28;
                 maxSmartMobsPerPlayer = 36;
+                multiplayerSmartMobsPerExtraPlayer = 12;
+                multiplayerEncounterBonusPerExtraPlayer = 0.16;
+                multiplayerDeathMercySeconds = 25;
+                multiplayerDogpilePenalty = 12.0;
                 antiFarmTier1Crowd = 6;
                 antiFarmTier2Crowd = 10;
                 antiFarmTier3Crowd = 16;
-            }
-            case COOP -> {
-                naturalSquadChanceMax = 0.70;
-                statHealthBonusMax = 0.28;
-                statDamageBonusMax = 0.16;
-                maxSmartMobsPerPlayer = 18;
-                multiplayerSmartMobsPerExtraPlayer = 10;
-                multiplayerEncounterBonusPerExtraPlayer = 0.10;
-                multiplayerDeathMercySeconds = 60;
-                multiplayerDogpilePenalty = 24.0;
             }
         }
     }
