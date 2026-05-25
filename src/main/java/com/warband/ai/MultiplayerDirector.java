@@ -151,7 +151,7 @@ public final class MultiplayerDirector {
             Float score = player.getAttached(com.warband.entity.WarbandAttachments.PLAYER_SCORE);
             boolean relief = player.getAttached(com.warband.entity.WarbandAttachments.DEATH_RELIEF) != null;
             lines.add(String.format("  %s score=%.2f relief=%s pos=%d %d %d",
-                    player.getGameProfile().getName(),
+                    player.getName().getString(),
                     score != null ? score : 0.0f,
                     relief,
                     player.getBlockX(), player.getBlockY(), player.getBlockZ()));
@@ -214,7 +214,7 @@ public final class MultiplayerDirector {
 
     private record Threat(String name, double value) {
         Threat(ServerPlayer player, double value) {
-            this(player.getGameProfile().getName(), value);
+            this(player.getName().getString(), value);
         }
     }
 
