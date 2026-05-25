@@ -113,6 +113,7 @@ public final class SquadCoordinator {
             while (iterator.hasNext()) {
                 Squad squad = iterator.next();
                 squad.tick();
+                MultiplayerDirector.shareIntel(squad, SQUADS.values());
                 if (squad.isEmpty()) {
                     iterator.remove();
                 }
@@ -303,6 +304,24 @@ public final class SquadCoordinator {
         return SQUADS.get(id);
     }
 
+    public static List<String> debugSquadLines(ServerLevel level, BlockPos pos) {
+        List<String> lines = new ArrayList<>();
+        for (Squad squad : SQUADS.values()) {
+            if (squad.level() != level || squad.isEmpty()) continue;
+            if (squad.center().distanceToSqr(pos.getCenter()) > SMART_SCAN_RADIUS * SMART_SCAN_RADIUS) continue;
+            String lastKnown = squad.lastKnownPos() == null
+                    ? "none"
+                    : squad.lastKnownPos().getX() + " " + squad.lastKnownPos().getY() + " " + squad.lastKnownPos().getZ();
+            lines.add(String.format("squad=%d members=%d morale=%.2f routing=%s lastKnown=%s threat=%s",
+                    squad.id(), squad.members().size(), squad.morale(), squad.isRouting(),
+                    lastKnown, MultiplayerDirector.threatSummary(squad)));
+        }
+        if (lines.isEmpty()) {
+            lines.add("No active squads nearby.");
+        }
+        return lines;
+    }
+
     private static final double SQUAD_REGION_RADIUS = 64.0;
     private static final int MAX_EXTRA_PLAYERS = 8;
 
@@ -314,11 +333,7 @@ public final class SquadCoordinator {
     private static int effectiveMaxSquadSize(ServerLevel level, BlockPos near) {
         int base = WarbandConfig.maxSquadSize;
         if (WarbandConfig.squadPlayerBonus <= 0) return base;
-        AABB box = AABB.ofSize(near.getCenter(),
-                SQUAD_REGION_RADIUS * 2.0, SQUAD_REGION_RADIUS * 2.0, SQUAD_REGION_RADIUS * 2.0);
-        int players = level.getEntitiesOfClass(Player.class, box,
-                player -> player.isAlive() && !player.isSpectator()).size();
-        int extra = Math.min(MAX_EXTRA_PLAYERS, Math.max(0, players - 1));
+        int extra = Math.min(MAX_EXTRA_PLAYERS, MultiplayerDirector.extraPartyPlayers(level, near));
         return base + WarbandConfig.squadPlayerBonus * extra;
     }
 
@@ -618,10 +633,11 @@ public final class SquadCoordinator {
     }
 
     private static boolean underSmartCap(ServerLevel level, Mob mob) {
-        Player nearest = level.getNearestPlayer(
-                mob.getX(), mob.getY(), mob.getZ(), SMART_SCAN_RADIUS, false);
+        if (WarbandConfig.multiplayerFeaturesEnabled) {
+            return MultiplayerDirector.underSmartBudget(level, mob.blockPosition());
+        }
+        Player nearest = level.getNearestPlayer(mob.getX(), mob.getY(), mob.getZ(), SMART_SCAN_RADIUS, false);
         if (nearest == null) return true;
-
         AABB box = AABB.ofSize(nearest.position(), SMART_SCAN_RADIUS * 2.0, SMART_SCAN_RADIUS, SMART_SCAN_RADIUS * 2.0);
         List<Mob> smart = new ArrayList<>(level.getEntitiesOfClass(Mob.class, box, SquadCoordinator::hasWarbandAi));
         return smart.size() < WarbandConfig.maxSmartMobsPerPlayer;

@@ -1,6 +1,7 @@
 package com.warband.spawn;
 
 import com.warband.config.WarbandConfig;
+import com.warband.ai.MultiplayerDirector;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -56,6 +57,7 @@ public final class EncounterDirector {
         if (chance < 1.0) {
             chance += WarbandConfig.encounterPlayerBonus * extraNearbyPlayers(level, pos);
         }
+        chance *= MultiplayerDirector.encounterChanceMultiplier(level, pos);
         return mob.getRandom().nextDouble() < chance;
     }
 

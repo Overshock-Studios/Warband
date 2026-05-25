@@ -152,17 +152,19 @@ public final class Squad {
     }
 
     private void updatePerception() {
-        LivingEntity visibleTarget = null;
+        List<LivingEntity> visible = new ArrayList<>();
         for (Mob mob : members) {
             LivingEntity candidate = mob.getTarget();
             if (candidate != null && candidate.isAlive() && mob.hasLineOfSight(candidate)) {
-                visibleTarget = candidate;
+                visible.add(candidate);
                 lastKnownPos = candidate.blockPosition();
                 lastKnownTicks = LAST_KNOWN_TICKS;
-                break;
             }
         }
 
+        LivingEntity visibleTarget = visible.isEmpty()
+                ? null
+                : MultiplayerDirector.chooseSquadTarget(this, members.getFirst(), visible);
         target = visibleTarget;
         if (visibleTarget == null && lastKnownTicks > 0) {
             lastKnownTicks -= PERCEPTION_INTERVAL;

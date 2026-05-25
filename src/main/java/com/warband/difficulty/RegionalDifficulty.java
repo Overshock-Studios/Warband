@@ -136,6 +136,12 @@ public final class RegionalDifficulty {
                 int pressureSamples = now - cell.lastTouched <= SAMPLE_INTERVAL_TICKS * 2L
                         ? cell.pressureSamples + 1
                         : 1;
+                int requiredSamples = Math.max(1,
+                        (WarbandConfig.regionalIncreaseDelaySeconds * 20 + SAMPLE_INTERVAL_TICKS - 1) / SAMPLE_INTERVAL_TICKS);
+                if (pressureSamples < requiredSamples && groupTarget(cellEntry.getValue()) > cell.value) {
+                    cells.put(cellEntry.getKey(), new Cell(cell.value, now, pressureSamples));
+                    continue;
+                }
                 double acceleration = Math.min(WarbandConfig.regionalAccelerationMax,
                         pressureSamples * WarbandConfig.regionalAccelerationPerSample);
                 double blend = clamp01(WarbandConfig.regionalBlendRate + acceleration);
@@ -163,7 +169,8 @@ public final class RegionalDifficulty {
                     iterator.remove();
                     continue;
                 }
-                if (now > cell.lastTouched) {
+                long decayDelayTicks = WarbandConfig.regionalDecayDelaySeconds * 20L;
+                if (now - cell.lastTouched > decayDelayTicks) {
                     int pressureSamples = Math.max(0, cell.pressureSamples - 1);
                     entry.setValue(new Cell(cell.value * (1.0 - WarbandConfig.regionalDecayRate), cell.lastTouched, pressureSamples));
                 }

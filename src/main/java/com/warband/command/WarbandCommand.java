@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.warband.ai.Squad;
 import com.warband.ai.SquadCoordinator;
+import com.warband.ai.MultiplayerDirector;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.difficulty.RegionalDifficulty;
@@ -53,6 +54,12 @@ public final class WarbandCommand {
                                 .executes(WarbandCommand::reportMobs))
                         .then(Commands.literal("mobdebug")
                                 .executes(WarbandCommand::reportMobDebug))
+                        .then(Commands.literal("players")
+                                .executes(WarbandCommand::reportPlayers))
+                        .then(Commands.literal("squads")
+                                .executes(WarbandCommand::reportSquads))
+                        .then(Commands.literal("encounter")
+                                .executes(WarbandCommand::reportEncounter))
                         .then(Commands.literal("region")
                                 .executes(WarbandCommand::reportRegion))
                         .then(Commands.literal("intel")
@@ -83,6 +90,42 @@ public final class WarbandCommand {
         for (String line : RegionalDifficulty.mapAround(level, pos, 4).split("\\n")) {
             source.sendSuccess(() -> Component.literal("  " + line), false);
         }
+        return 1;
+    }
+
+    private static int reportPlayers(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerLevel level = source.getLevel();
+        BlockPos pos = BlockPos.containing(source.getPosition());
+        for (String line : MultiplayerDirector.playerDebugLines(level, pos)) {
+            source.sendSuccess(() -> Component.literal("[Warband] " + line), false);
+        }
+        return 1;
+    }
+
+    private static int reportSquads(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerLevel level = source.getLevel();
+        BlockPos pos = BlockPos.containing(source.getPosition());
+        for (String line : SquadCoordinator.debugSquadLines(level, pos)) {
+            source.sendSuccess(() -> Component.literal("[Warband] " + line), false);
+        }
+        return 1;
+    }
+
+    private static int reportEncounter(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerLevel level = source.getLevel();
+        BlockPos pos = BlockPos.containing(source.getPosition());
+        source.sendSuccess(() -> Component.literal(String.format(
+                "[Warband] encounter multiplayerMultiplier=%.2f smartBudget=%d activeSquads=%d",
+                MultiplayerDirector.encounterChanceMultiplier(level, pos),
+                MultiplayerDirector.effectiveSmartBudget(level, pos),
+                SquadCoordinator.activeSquads())), false);
+        source.sendSuccess(() -> Component.literal(String.format(
+                "  regional timers: increaseDelay=%ds decayDelay=%ds",
+                WarbandConfig.regionalIncreaseDelaySeconds,
+                WarbandConfig.regionalDecayDelaySeconds)), false);
         return 1;
     }
 

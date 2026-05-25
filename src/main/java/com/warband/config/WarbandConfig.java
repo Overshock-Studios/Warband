@@ -45,6 +45,10 @@ public final class WarbandConfig {
     public static double regionalAccelerationPerSample = 0.01;
     public static double regionalAccelerationMax = 0.25;
     public static double regionalDecayRate = 0.002;
+    /** REGIONAL mode: pressure must persist this long before a cell rises. */
+    public static int regionalIncreaseDelaySeconds = 10;
+    /** REGIONAL mode: cell decay waits this long after last pressure. */
+    public static int regionalDecayDelaySeconds = 120;
     /** REGIONAL mode: extra difficulty added per additional nearby player. */
     public static double regionalPlayerBonus = 0.15;
     /** Extra difficulty added in the Nether, regardless of mode. */
@@ -164,6 +168,8 @@ public final class WarbandConfig {
         regionalAccelerationPerSample = parseDouble(props, "regionalAccelerationPerSample", regionalAccelerationPerSample, 0.0, 1.0, logger);
         regionalAccelerationMax = parseDouble(props, "regionalAccelerationMax", regionalAccelerationMax, 0.0, 1.0, logger);
         regionalDecayRate = parseDouble(props, "regionalDecayRate", regionalDecayRate, 0.0, 1.0, logger);
+        regionalIncreaseDelaySeconds = parseInt(props, "regionalIncreaseDelaySeconds", regionalIncreaseDelaySeconds, 0, 3600, logger);
+        regionalDecayDelaySeconds = parseInt(props, "regionalDecayDelaySeconds", regionalDecayDelaySeconds, 0, 100_000, logger);
         regionalPlayerBonus = parseDouble(props, "regionalPlayerBonus", regionalPlayerBonus, 0.0, 1.0, logger);
         netherDifficultyBonus = parseDouble(props, "netherDifficultyBonus", netherDifficultyBonus, 0.0, 1.0, logger);
         endDifficultyBonus = parseDouble(props, "endDifficultyBonus", endDifficultyBonus, 0.0, 1.0, logger);
@@ -275,6 +281,9 @@ public final class WarbandConfig {
                 regionalAccelerationPerSample=%s
                 regionalAccelerationMax=%s
                 regionalDecayRate=%s
+                # REGIONAL mode: timers for sustained-pressure increase and post-pressure decay grace.
+                regionalIncreaseDelaySeconds=%d
+                regionalDecayDelaySeconds=%d
                 # REGIONAL mode: extra difficulty added per additional nearby player.
                 regionalPlayerBonus=%s
                 # Extra difficulty added in the Nether / End, regardless of mode.
@@ -403,6 +412,8 @@ public final class WarbandConfig {
                     regionalAccelerationPerSample,
                     regionalAccelerationMax,
                     regionalDecayRate,
+                    regionalIncreaseDelaySeconds,
+                    regionalDecayDelaySeconds,
                     regionalPlayerBonus,
                     netherDifficultyBonus,
                     endDifficultyBonus,

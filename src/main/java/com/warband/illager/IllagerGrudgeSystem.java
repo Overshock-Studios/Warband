@@ -2,6 +2,7 @@ package com.warband.illager;
 
 import com.warband.ai.SquadCoordinator;
 import com.warband.ai.TacticalEffects;
+import com.warband.ai.MultiplayerDirector;
 import com.warband.compat.IllagerInvasionCompat;
 import com.warband.compat.RaidCompat;
 import com.warband.compat.StructureCompat;
@@ -83,7 +84,9 @@ public final class IllagerGrudgeSystem {
         // handled in afterDeath; no field-style witness grudges here.
         if (inFactionSeat(mob)) return;
 
-        recordWitnesses((ServerLevel) mob.level(), mob, player, true);
+        for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
+            recordWitnesses((ServerLevel) mob.level(), mob, participant, true);
+        }
     }
 
     private static void afterDeath(LivingEntity entity, DamageSource source) {
@@ -97,10 +100,14 @@ public final class IllagerGrudgeSystem {
             if (inFactionSeat(mob)) {
                 // Assaulting a faction's seat raises its heat (→ a bounty hunter)
                 // rather than mustering revenge patrols back into the ruin.
-                addReputation(player, IllagerFactionSystem.factionOrDefault(mob),
-                        MANSION_HEAT_PER_KILL, mob.level().getGameTime() + BOUNTY_RETRY_TICKS);
+                for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
+                    addReputation(participant, IllagerFactionSystem.factionOrDefault(mob),
+                            MANSION_HEAT_PER_KILL, mob.level().getGameTime() + BOUNTY_RETRY_TICKS);
+                }
             } else {
-                recordWitnesses((ServerLevel) mob.level(), mob, player, true);
+                for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
+                    recordWitnesses((ServerLevel) mob.level(), mob, participant, true);
+                }
             }
         }
         handleWarmarshalDeath(entity, source);
@@ -290,7 +297,9 @@ public final class IllagerGrudgeSystem {
 
         double difficulty = Math.max(0.45, maxDifficulty(grudges));
         int anger = totalAnger(grudges);
-        int size = Math.min(7, Math.max(grudges.size(), 2 + anger / 35 + (int) Math.floor(difficulty * 2.0)));
+        int size = Math.min(7 + MultiplayerDirector.revengePartyBonus(level, player.blockPosition()),
+                Math.max(grudges.size(), 2 + anger / 35 + (int) Math.floor(difficulty * 2.0)
+                        + MultiplayerDirector.revengePartyBonus(level, player.blockPosition())));
         List<Mob> spawned = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             BlockPos pos = origin.offset(player.getRandom().nextInt(7) - 3, 0, player.getRandom().nextInt(7) - 3);
@@ -504,6 +513,17 @@ public final class IllagerGrudgeSystem {
         }
         reputations.add(new FactionReputation(faction, heat, bountyReadyAt));
         player.setAttached(WarbandAttachments.ILLAGER_REPUTATION, trimReputation(reputations));
+    }
+
+    private static List<ServerPlayer> participantsNear(ServerLevel level, Mob mob, ServerPlayer source) {
+        if (!WarbandConfig.multiplayerFeaturesEnabled) return List.of(source);
+        AABB box = AABB.ofSize(mob.position(), 64.0 * 2.0, 32.0, 64.0 * 2.0);
+        List<ServerPlayer> participants = new ArrayList<>(level.getEntitiesOfClass(ServerPlayer.class, box,
+                player -> player.isAlive() && !player.isSpectator()));
+        if (!participants.contains(source)) {
+            participants.add(source);
+        }
+        return participants;
     }
 
     private static List<IllagerGrudge> grudges(ServerPlayer player) {
