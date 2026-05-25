@@ -128,7 +128,9 @@ public final class SpawnDirector {
                 || reason == EntitySpawnReason.EVENT;
         if (!SquadCoordinator.assignNaturalSpawn(mob, difficulty, spawnFormation)) {
             stampVanillaAi(mob, difficulty);
-            SquadCoordinator.bindStampedSolo(mob, level);
+            if (WarbandConfig.squadsEnabled) {
+                SquadCoordinator.bindStampedSolo(mob, level);
+            }
         }
     }
 

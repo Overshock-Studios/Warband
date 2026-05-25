@@ -3,6 +3,7 @@ package com.warband.ai.goal;
 import com.warband.ai.Squad;
 import com.warband.ai.TacticalEffects;
 import com.warband.ai.TemporaryTacticBlocks;
+import com.warband.entity.Tactic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,6 +16,11 @@ import net.minecraft.world.phys.Vec3;
 /** Endermen disrupt escape routes with teleports and short-lived block placement. */
 public final class EndermanDisruptGoal extends SquadGoal {
 
+    private static final int COOLDOWN_TICKS = 100;
+
+    private LivingEntity disruptTarget;
+    private BlockPos disruptionPos;
+
     public EndermanDisruptGoal(Mob mob, Squad squad) {
         super(mob, squad, 1.0);
     }
@@ -22,24 +28,32 @@ public final class EndermanDisruptGoal extends SquadGoal {
     @Override
     public boolean canUse() {
         LivingEntity target = visibleTarget();
-        if (target == null || !decisionReady(100)) return false;
+        if (target == null || !cooldownReady()) return false;
         if (mob.distanceToSqr(target) > 18.0 * 18.0) return false;
 
+        disruptTarget = target;
+        disruptionPos = disruptionPos(target);
+        return disruptionPos != null || mob.distanceToSqr(target) > 8.0 * 8.0;
+    }
+
+    @Override
+    public void start() {
+        if (disruptTarget == null || !disruptTarget.isAlive()) return;
+        resetCooldown(COOLDOWN_TICKS);
         ServerLevel level = (ServerLevel) mob.level();
-        BlockPos pos = disruptionPos(target);
         boolean placed = false;
-        if (pos != null) {
-            placed = TemporaryTacticBlocks.place(level, pos, carriedOrFallback(), 20 * 8);
+        if (disruptionPos != null) {
+            placed = TemporaryTacticBlocks.place(level, disruptionPos, carriedOrFallback(), 20 * 8);
         }
 
-        if (mob.distanceToSqr(target) > 8.0 * 8.0) {
-            Vec3 behind = target.position().subtract(target.getLookAngle().scale(3.0));
+        if (mob.distanceToSqr(disruptTarget) > 8.0 * 8.0) {
+            Vec3 behind = disruptTarget.position().subtract(disruptTarget.getLookAngle().scale(3.0));
             mob.randomTeleport(behind.x, behind.y, behind.z, true);
         }
         if (placed) {
+            logTactic(Tactic.ENDERMAN_DISRUPT);
             TacticalEffects.signal(level, mob);
         }
-        return placed;
     }
 
     private BlockPos disruptionPos(LivingEntity target) {

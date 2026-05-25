@@ -25,6 +25,8 @@ import net.minecraft.world.entity.monster.zombie.Drowned;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
 
+import java.util.EnumSet;
+
 /** Difficulty-gated situational tactics assigned when Warband stamps a mob. */
 public enum Tactic {
 
@@ -68,77 +70,127 @@ public enum Tactic {
     }
 
     public static int chooseFor(Mob mob, double difficulty, Role role) {
+        return chooseForSubjects(subjectsFor(mob), difficulty, role);
+    }
+
+    static int chooseForSubjects(EnumSet<Subject> subjects, double difficulty, Role role) {
         int mask = 0;
-        if (mob instanceof Spider) {
+        if (subjects.contains(Subject.SPIDER)) {
             if (difficulty >= 0.45) mask |= SPIDER_WEB.bit;
             if (difficulty >= 0.65 || role == Role.SKIRMISHER) mask |= STICKY_PATH.bit;
         }
-        if (mob instanceof CaveSpider && difficulty >= 0.45) {
+        if (subjects.contains(Subject.CAVE_SPIDER) && difficulty >= 0.45) {
             mask |= CAVE_SPIDER_AMBUSH.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof AbstractSkeleton) {
+        if (subjects.contains(Subject.ABSTRACT_SKELETON)) {
             if (difficulty >= 0.50) mask |= PRESSURE_UNREACHABLE.bit;
             if (difficulty >= 0.60) mask |= SKELETON_SMOKE.bit;
         }
-        if (mob instanceof Stray && difficulty >= 0.55) {
+        if (subjects.contains(Subject.STRAY) && difficulty >= 0.55) {
             mask |= FROST_WALKER.bit;
         }
-        if (mob instanceof Zombie || mob instanceof Drowned || mob instanceof ZombifiedPiglin) {
+        if (subjects.contains(Subject.ZOMBIE_FAMILY)) {
             if (difficulty >= 0.40) mask |= ZOMBIE_HORDE.bit;
         }
-        if ((mob instanceof Zombie || mob instanceof Drowned || mob instanceof ZombifiedPiglin) && difficulty >= 0.70) {
+        if (subjects.contains(Subject.ZOMBIE_FAMILY) && difficulty >= 0.70) {
             mask |= WATER_COMMIT.bit;
         }
-        if ((mob instanceof Zombie || mob instanceof Drowned || mob instanceof ZombifiedPiglin) && difficulty >= 0.80) {
+        if (subjects.contains(Subject.ZOMBIE_FAMILY) && difficulty >= 0.80) {
             mask |= LEAP_UNREACHABLE.bit;
         }
-        if (mob instanceof Creeper && difficulty >= 0.55) {
+        if (subjects.contains(Subject.CREEPER) && difficulty >= 0.55) {
             mask |= PRESSURE_UNREACHABLE.bit | CREEPER_STALK.bit;
         }
         if (difficulty >= 0.75) {
             mask |= PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof EnderMan && difficulty >= 0.55) {
+        if (subjects.contains(Subject.ENDERMAN) && difficulty >= 0.55) {
             mask |= ENDERMAN_DISRUPT.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof AbstractPiglin && difficulty >= 0.35) {
+        if (subjects.contains(Subject.ABSTRACT_PIGLIN) && difficulty >= 0.35) {
             mask |= PIGLIN_SOCIAL.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof Blaze && difficulty >= 0.45) {
+        if (subjects.contains(Subject.BLAZE) && difficulty >= 0.45) {
             mask |= BLAZE_HOVER.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof Witch && difficulty >= 0.45) {
+        if (subjects.contains(Subject.WITCH) && difficulty >= 0.45) {
             mask |= WITCH_SUPPORT.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if ((mob instanceof Slime || mob instanceof MagmaCube) && difficulty >= 0.50) {
+        if (subjects.contains(Subject.SLIME_FAMILY) && difficulty >= 0.50) {
             mask |= SLIME_SURGE.bit;
         }
-        if ((mob instanceof Hoglin || mob instanceof Zoglin) && difficulty >= 0.45) {
+        if (subjects.contains(Subject.HOGLIN_FAMILY) && difficulty >= 0.45) {
             mask |= HOGLIN_STAMPEDE.bit;
             if (difficulty >= 0.65) mask |= LEAP_UNREACHABLE.bit | MOB_STACK_CLIMB.bit;
         }
-        if (IllagerInvasionCompat.isIllagerLike(mob) && difficulty >= 0.45) {
+        if (subjects.contains(Subject.ILLAGER_LIKE) && difficulty >= 0.45) {
             mask |= ILLAGER_COMMAND.bit | PRESSURE_UNREACHABLE.bit;
             if (difficulty >= 0.70) mask |= LEAP_UNREACHABLE.bit | MOB_STACK_CLIMB.bit;
         }
-        if (mob instanceof Phantom && difficulty >= 0.45) {
+        if (subjects.contains(Subject.PHANTOM) && difficulty >= 0.45) {
             mask |= PHANTOM_HARASS.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof Guardian && difficulty >= 0.45) {
+        if (subjects.contains(Subject.GUARDIAN) && difficulty >= 0.45) {
             mask |= GUARDIAN_SURGE.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof Shulker && difficulty >= 0.50) {
+        if (subjects.contains(Subject.SHULKER) && difficulty >= 0.50) {
             mask |= SHULKER_LOCKDOWN.bit;
         }
-        if (mob instanceof Ghast && difficulty >= 0.45) {
+        if (subjects.contains(Subject.GHAST) && difficulty >= 0.45) {
             mask |= GHAST_REPOSITION.bit;
         }
-        if (mob instanceof Ravager && difficulty >= 0.50) {
+        if (subjects.contains(Subject.RAVAGER) && difficulty >= 0.50) {
             mask |= RAVAGER_BREAKER.bit | PRESSURE_UNREACHABLE.bit;
         }
-        if (mob instanceof Warden && difficulty >= 0.35) {
+        if (subjects.contains(Subject.WARDEN) && difficulty >= 0.35) {
             mask |= WARDEN_PRESSURE.bit | PRESSURE_UNREACHABLE.bit;
         }
         return mask;
+    }
+
+    private static EnumSet<Subject> subjectsFor(Mob mob) {
+        EnumSet<Subject> subjects = EnumSet.noneOf(Subject.class);
+        if (mob instanceof Spider) subjects.add(Subject.SPIDER);
+        if (mob instanceof CaveSpider) subjects.add(Subject.CAVE_SPIDER);
+        if (mob instanceof AbstractSkeleton) subjects.add(Subject.ABSTRACT_SKELETON);
+        if (mob instanceof Stray) subjects.add(Subject.STRAY);
+        if (mob instanceof Zombie || mob instanceof Drowned || mob instanceof ZombifiedPiglin) subjects.add(Subject.ZOMBIE_FAMILY);
+        if (mob instanceof Creeper) subjects.add(Subject.CREEPER);
+        if (mob instanceof EnderMan) subjects.add(Subject.ENDERMAN);
+        if (mob instanceof AbstractPiglin) subjects.add(Subject.ABSTRACT_PIGLIN);
+        if (mob instanceof Blaze) subjects.add(Subject.BLAZE);
+        if (mob instanceof Witch) subjects.add(Subject.WITCH);
+        if (mob instanceof Slime || mob instanceof MagmaCube) subjects.add(Subject.SLIME_FAMILY);
+        if (mob instanceof Hoglin || mob instanceof Zoglin) subjects.add(Subject.HOGLIN_FAMILY);
+        if (IllagerInvasionCompat.isIllagerLike(mob)) subjects.add(Subject.ILLAGER_LIKE);
+        if (mob instanceof Phantom) subjects.add(Subject.PHANTOM);
+        if (mob instanceof Guardian) subjects.add(Subject.GUARDIAN);
+        if (mob instanceof Shulker) subjects.add(Subject.SHULKER);
+        if (mob instanceof Ghast) subjects.add(Subject.GHAST);
+        if (mob instanceof Ravager) subjects.add(Subject.RAVAGER);
+        if (mob instanceof Warden) subjects.add(Subject.WARDEN);
+        return subjects;
+    }
+
+    enum Subject {
+        SPIDER,
+        CAVE_SPIDER,
+        ABSTRACT_SKELETON,
+        STRAY,
+        ZOMBIE_FAMILY,
+        CREEPER,
+        ENDERMAN,
+        ABSTRACT_PIGLIN,
+        BLAZE,
+        WITCH,
+        SLIME_FAMILY,
+        HOGLIN_FAMILY,
+        ILLAGER_LIKE,
+        PHANTOM,
+        GUARDIAN,
+        SHULKER,
+        GHAST,
+        RAVAGER,
+        WARDEN
     }
 }

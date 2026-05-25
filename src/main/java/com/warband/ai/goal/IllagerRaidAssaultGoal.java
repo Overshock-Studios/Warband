@@ -6,6 +6,7 @@ import com.warband.compat.RaidCompat;
 import com.warband.config.WarbandConfig;
 import com.warband.entity.MobData;
 import com.warband.entity.Role;
+import com.warband.entity.Tactic;
 import com.warband.illager.FactionDoctrine;
 import com.warband.illager.IllagerFactionSystem;
 import net.minecraft.server.level.ServerLevel;
@@ -23,6 +24,10 @@ import java.util.List;
 /** Raid doctrine: prioritize village defenders and keep pressure on the settlement. */
 public final class IllagerRaidAssaultGoal extends SquadGoal {
 
+    private static final int COOLDOWN_TICKS = 35;
+
+    private LivingEntity raidTarget;
+
     public IllagerRaidAssaultGoal(Mob mob, Squad squad) {
         super(mob, squad, 1.2);
     }
@@ -30,16 +35,22 @@ public final class IllagerRaidAssaultGoal extends SquadGoal {
     @Override
     public boolean canUse() {
         if (!WarbandConfig.illagerRaidDoctrineEnabled) return false;
-        if (!RaidCompat.isActiveRaider(mob) || !decisionReady(35)) return false;
+        if (!RaidCompat.isActiveRaider(mob) || !cooldownReady()) return false;
 
-        LivingEntity priority = priorityTarget();
-        if (priority == null) return false;
+        raidTarget = priorityTarget();
+        return raidTarget != null;
+    }
 
-        mob.setTarget(priority);
+    @Override
+    public void start() {
+        if (raidTarget == null || !raidTarget.isAlive()) return;
+        resetCooldown(COOLDOWN_TICKS);
+
+        mob.setTarget(raidTarget);
         Role role = MobData.get(mob).role();
         FactionDoctrine doctrine = IllagerFactionSystem.doctrineOrDefault(mob);
         if (role == Role.LEADER) {
-            priority.addEffect(new MobEffectInstance(MobEffects.GLOWING, 80, 0, false, true));
+            raidTarget.addEffect(new MobEffectInstance(MobEffects.GLOWING, 80, 0, false, true));
             TacticalEffects.signal((ServerLevel) mob.level(), mob);
         }
         if (role == Role.BRUISER || role == Role.SKIRMISHER) {
@@ -63,20 +74,23 @@ public final class IllagerRaidAssaultGoal extends SquadGoal {
             }
         }
         if (doctrine == FactionDoctrine.BURN) {
-            if (priority instanceof Villager) {
-                priority.setRemainingFireTicks(Math.max(priority.getRemainingFireTicks(), 60));
+            if (raidTarget instanceof Villager) {
+                raidTarget.setRemainingFireTicks(Math.max(raidTarget.getRemainingFireTicks(), 60));
             } else if (role == Role.BRUISER || role == Role.SKIRMISHER) {
                 // Burn squad scorches whatever they engage, not just villagers.
-                priority.setRemainingFireTicks(Math.max(priority.getRemainingFireTicks(), 40));
+                raidTarget.setRemainingFireTicks(Math.max(raidTarget.getRemainingFireTicks(), 40));
             }
         }
         if (role == Role.MARKSMAN || role == Role.SUPPORT || role == Role.LEADER) {
-            return moveTo(priority.blockPosition().offset(
+            logTactic(Tactic.ILLAGER_COMMAND);
+            moveTo(raidTarget.blockPosition().offset(
                     mob.getRandom().nextInt(9) - 4,
                     0,
                     mob.getRandom().nextInt(9) - 4));
+            return;
         }
-        return moveTo(priority.blockPosition());
+        logTactic(Tactic.ILLAGER_COMMAND);
+        moveTo(raidTarget.blockPosition());
     }
 
     private LivingEntity priorityTarget() {

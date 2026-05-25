@@ -8,8 +8,10 @@ import com.warband.config.WarbandConfig;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.difficulty.RegionalDifficulty;
 import com.warband.entity.MobData;
+import com.warband.entity.Tactic;
 import com.warband.entity.WarbandAttachments;
 import com.warband.illager.IllagerGrudgeSystem;
+import com.warband.mixin.MobGoalSelectorAccessor;
 import com.warband.spawn.SpawnDirector;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
@@ -21,9 +23,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.phys.AABB;
 
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -34,6 +38,7 @@ public final class WarbandCommand {
 
     /** Edge length of the cube scanned by {@code /warband mobs}. */
     private static final double MOB_SCAN_SIZE = 64.0;
+    private static final double MOB_DEBUG_SIZE = 24.0;
 
     private WarbandCommand() {
     }
@@ -46,6 +51,8 @@ public final class WarbandCommand {
                                 .executes(WarbandCommand::reportDifficulty))
                         .then(Commands.literal("mobs")
                                 .executes(WarbandCommand::reportMobs))
+                        .then(Commands.literal("mobdebug")
+                                .executes(WarbandCommand::reportMobDebug))
                         .then(Commands.literal("region")
                                 .executes(WarbandCommand::reportRegion))
                         .then(Commands.literal("intel")
@@ -75,6 +82,41 @@ public final class WarbandCommand {
         source.sendSuccess(() -> Component.literal("  map: .=0, 1=<25, 2=<50, 3=<75, 4=<95, 5=max"), false);
         for (String line : RegionalDifficulty.mapAround(level, pos, 4).split("\\n")) {
             source.sendSuccess(() -> Component.literal("  " + line), false);
+        }
+        return 1;
+    }
+
+    /** Reports detailed state for the nearest stamped mob. */
+    private static int reportMobDebug(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerLevel level = source.getLevel();
+        AABB box = AABB.ofSize(source.getPosition(), MOB_DEBUG_SIZE, MOB_DEBUG_SIZE, MOB_DEBUG_SIZE);
+        Mob mob = level.getEntitiesOfClass(Mob.class, box, MobData::isStamped).stream()
+                .min(Comparator.comparingDouble(candidate -> candidate.distanceToSqr(source.getPosition())))
+                .orElse(null);
+        if (mob == null) {
+            source.sendFailure(Component.literal("[Warband] No stamped mob within " + (int) MOB_DEBUG_SIZE + " blocks."));
+            return 0;
+        }
+
+        MobData data = MobData.get(mob);
+        boolean goalsBound = Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.WARBAND_GOALS_BOUND));
+        int goalCount = warbandGoalCount(mob);
+        String target = mob.getTarget() == null ? "none" : mob.getTarget().getType().toShortString();
+        source.sendSuccess(() -> Component.literal(String.format(
+                "[Warband] %s id=%d difficulty=%.2f role=%s squad=%d tactics=%s",
+                mob.getType().toShortString(), mob.getId(), data.difficulty(), data.role(), data.squadId(), tacticNames(data))), false);
+        source.sendSuccess(() -> Component.literal(String.format(
+                "  goalsBound=%s warbandGoals=%d target=%s health=%.1f/%.1f pos=%d %d %d",
+                goalsBound, goalCount, target, mob.getHealth(), mob.getMaxHealth(),
+                mob.blockPosition().getX(), mob.blockPosition().getY(), mob.blockPosition().getZ())), false);
+        Squad squad = SquadCoordinator.getSquad(data.squadId());
+        if (squad != null) {
+            BlockPos lastKnown = squad.lastKnownPos();
+            source.sendSuccess(() -> Component.literal(String.format(
+                    "  squadMembers=%d morale=%.2f routing=%s lastKnown=%s",
+                    squad.members().size(), squad.morale(), squad.isRouting(),
+                    lastKnown == null ? "none" : lastKnown.getX() + " " + lastKnown.getY() + " " + lastKnown.getZ())), false);
         }
         return 1;
     }
@@ -209,6 +251,31 @@ public final class WarbandCommand {
         source.sendSuccess(() -> Component.literal(String.format(
                 "[Warband] %d stamped mob(s) nearby, %d in squads, %d active squad(s), difficulty min %.2f / avg %.2f / max %.2f",
                 count, fSquadded, activeSquads, fMin, avg, fMax)), false);
+        return count;
+    }
+
+    private static String tacticNames(MobData data) {
+        if (data.tactics() == 0) return "none";
+        StringBuilder names = new StringBuilder();
+        for (Tactic tactic : Tactic.values()) {
+            if (!data.hasTactic(tactic)) continue;
+            if (!names.isEmpty()) names.append(',');
+            names.append(tactic.name());
+            if (!WarbandConfig.tacticEnabled(tactic)) {
+                names.append("(disabled)");
+            }
+        }
+        return names.toString();
+    }
+
+    private static int warbandGoalCount(Mob mob) {
+        int count = 0;
+        for (WrappedGoal wrapped : ((MobGoalSelectorAccessor) mob).warband$goalSelector().getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.warband.ai.goal.WarbandGoal) count++;
+        }
+        for (WrappedGoal wrapped : ((MobGoalSelectorAccessor) mob).warband$targetSelector().getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof com.warband.ai.goal.WarbandGoal) count++;
+        }
         return count;
     }
 }

@@ -2,6 +2,7 @@ package com.warband.ai.goal;
 
 import com.warband.ai.Squad;
 import com.warband.ai.TacticalEffects;
+import com.warband.entity.Tactic;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
@@ -16,7 +17,10 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class WaterCommitGoal extends SquadGoal {
 
+    private static final int COOLDOWN_TICKS = 20;
+
     private int waterCommitTicks;
+    private LivingEntity waterTarget;
 
     public WaterCommitGoal(Mob mob, Squad squad) {
         super(mob, squad, 1.05);
@@ -24,15 +28,23 @@ public final class WaterCommitGoal extends SquadGoal {
 
     @Override
     public boolean canUse() {
-        if (!mob.isInWater() || !decisionReady(20)) return false;
+        if (!mob.isInWater() || !cooldownReady()) return false;
         LivingEntity target = visibleTarget();
-        boolean moving = target != null && mob.getNavigation().moveTo(target, speed);
-        if (moving) {
-            pressureToward(target);
+        if (target == null) return false;
+        waterTarget = target;
+        return true;
+    }
+
+    @Override
+    public void start() {
+        if (waterTarget == null || !waterTarget.isAlive()) return;
+        resetCooldown(COOLDOWN_TICKS);
+        if (mob.getNavigation().moveTo(waterTarget, speed)) {
+            pressureToward(waterTarget);
             accelerateDrowning();
+            logTactic(Tactic.WATER_COMMIT);
             TacticalEffects.waterCommit((ServerLevel) mob.level(), mob.position());
         }
-        return moving;
     }
 
     private void pressureToward(LivingEntity target) {

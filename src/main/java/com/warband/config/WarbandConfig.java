@@ -1,6 +1,7 @@
 package com.warband.config;
 
 import com.warband.difficulty.DifficultyMode;
+import com.warband.entity.Tactic;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -8,6 +9,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumSet;
 import java.util.Properties;
 
 /**
@@ -90,10 +92,24 @@ public final class WarbandConfig {
     public static double experienceLeaderBonus = 0.15;
     public static boolean bossAbilitiesEnabled = true;
     public static boolean extendedMobTacticsEnabled = true;
+    /** Comma-separated tactic names to suppress while keeping other smart AI active. */
+    public static String disabledTactics = "";
+    private static EnumSet<Tactic> disabledTacticSet = EnumSet.noneOf(Tactic.class);
+    /** If true, log each Warband tactic execution for debugging and balance passes. */
+    public static boolean debugTacticLogs = false;
     /** Sun-burning undead seek the nearest shade instead of standing and burning. */
     public static boolean seekShelterEnabled = true;
     /** Endermen shot by a player teleport next to the shooter and aggro, instead of just dodging. */
     public static boolean endermanProvokeEnabled = true;
+
+    // ── Multiplayer ────────────────────────────────────────────────────────
+    public static boolean multiplayerFeaturesEnabled = true;
+    public static int multiplayerSmartMobsPerExtraPlayer = 8;
+    public static double multiplayerEncounterBonusPerExtraPlayer = 0.12;
+    public static int multiplayerDeathMercySeconds = 45;
+    public static int multiplayerDeathMercyRadius = 48;
+    public static double multiplayerDeathMercyStrength = 0.65;
+    public static double multiplayerDogpilePenalty = 18.0;
 
     // ── Illagers ────────────────────────────────────────────────────────────
     public static boolean illagerFactionsEnabled = true;
@@ -184,8 +200,19 @@ public final class WarbandConfig {
         experienceLeaderBonus = parseDouble(props, "experienceLeaderBonus", experienceLeaderBonus, 0.0, 5.0, logger);
         bossAbilitiesEnabled = parseBoolean(props, "bossAbilitiesEnabled", bossAbilitiesEnabled, logger);
         extendedMobTacticsEnabled = parseBoolean(props, "extendedMobTacticsEnabled", extendedMobTacticsEnabled, logger);
+        disabledTactics = props.getProperty("disabledTactics", disabledTactics).trim();
+        disabledTacticSet = parseTacticSet(disabledTactics, logger);
+        debugTacticLogs = parseBoolean(props, "debugTacticLogs", debugTacticLogs, logger);
         seekShelterEnabled = parseBoolean(props, "seekShelterEnabled", seekShelterEnabled, logger);
         endermanProvokeEnabled = parseBoolean(props, "endermanProvokeEnabled", endermanProvokeEnabled, logger);
+
+        multiplayerFeaturesEnabled = parseBoolean(props, "multiplayerFeaturesEnabled", multiplayerFeaturesEnabled, logger);
+        multiplayerSmartMobsPerExtraPlayer = parseInt(props, "multiplayerSmartMobsPerExtraPlayer", multiplayerSmartMobsPerExtraPlayer, 0, 128, logger);
+        multiplayerEncounterBonusPerExtraPlayer = parseDouble(props, "multiplayerEncounterBonusPerExtraPlayer", multiplayerEncounterBonusPerExtraPlayer, 0.0, 2.0, logger);
+        multiplayerDeathMercySeconds = parseInt(props, "multiplayerDeathMercySeconds", multiplayerDeathMercySeconds, 0, 3600, logger);
+        multiplayerDeathMercyRadius = parseInt(props, "multiplayerDeathMercyRadius", multiplayerDeathMercyRadius, 1, 512, logger);
+        multiplayerDeathMercyStrength = parseDouble(props, "multiplayerDeathMercyStrength", multiplayerDeathMercyStrength, 0.0, 1.0, logger);
+        multiplayerDogpilePenalty = parseDouble(props, "multiplayerDogpilePenalty", multiplayerDogpilePenalty, 0.0, 100.0, logger);
 
         illagerFactionsEnabled = parseBoolean(props, "illagerFactionsEnabled", illagerFactionsEnabled, logger);
         illagerDoctrineEnabled = parseBoolean(props, "illagerDoctrineEnabled", illagerDoctrineEnabled, logger);
@@ -307,10 +334,28 @@ public final class WarbandConfig {
                 bossAbilitiesEnabled=%s
                 # If true, guardians, shulkers, ghasts, cave spiders, ravagers and wardens get Warband tactics.
                 extendedMobTacticsEnabled=%s
+                # Comma-separated tactic names to disable, e.g. SPIDER_WEB,ENDERMAN_DISRUPT.
+                disabledTactics=%s
+                # If true, logs each Warband tactic execution for debugging.
+                debugTacticLogs=%s
                 # If true, sun-burning undead seek the nearest shade instead of standing and burning.
                 seekShelterEnabled=%s
                 # If true, endermen shot by a player teleport next to the shooter and aggro.
                 endermanProvokeEnabled=%s
+
+                # ── Multiplayer ─────────────────────────────────────────────────
+                # If true, enables party-aware budgets, threat targets, shared intel, and death mercy.
+                multiplayerFeaturesEnabled=%s
+                # Extra smart-mob budget per additional nearby active player.
+                multiplayerSmartMobsPerExtraPlayer=%d
+                # Extra encounter enhancement chance multiplier per additional nearby player.
+                multiplayerEncounterBonusPerExtraPlayer=%s
+                # Temporary local pressure reduction after a nearby player death.
+                multiplayerDeathMercySeconds=%d
+                multiplayerDeathMercyRadius=%d
+                multiplayerDeathMercyStrength=%s
+                # Threat-score penalty per squadmate already targeting the same player.
+                multiplayerDogpilePenalty=%s
 
                 # ── Illagers ─────────────────────────────────────────────────────
                 # If true, illagers receive regional faction identity in names and grudge records.
@@ -393,8 +438,17 @@ public final class WarbandConfig {
                     experienceLeaderBonus,
                     bossAbilitiesEnabled,
                     extendedMobTacticsEnabled,
+                    disabledTactics,
+                    debugTacticLogs,
                     seekShelterEnabled,
                     endermanProvokeEnabled,
+                    multiplayerFeaturesEnabled,
+                    multiplayerSmartMobsPerExtraPlayer,
+                    multiplayerEncounterBonusPerExtraPlayer,
+                    multiplayerDeathMercySeconds,
+                    multiplayerDeathMercyRadius,
+                    multiplayerDeathMercyStrength,
+                    multiplayerDogpilePenalty,
                     illagerFactionsEnabled,
                     illagerDoctrineEnabled,
                     illagerGrudgesEnabled,
@@ -410,6 +464,10 @@ public final class WarbandConfig {
                     warmarshalDamageBonus,
                     goatHornCommandEnabled
                 );
+    }
+
+    public static boolean tacticEnabled(Tactic tactic) {
+        return !disabledTacticSet.contains(tactic);
     }
 
     private static boolean parseBoolean(Properties props, String key, boolean def, Logger logger) {
@@ -430,6 +488,21 @@ public final class WarbandConfig {
             return def;
         }
         return parsed != null ? parsed : def;
+    }
+
+    private static EnumSet<Tactic> parseTacticSet(String raw, Logger logger) {
+        EnumSet<Tactic> set = EnumSet.noneOf(Tactic.class);
+        if (raw == null || raw.isBlank()) return set;
+        for (String token : raw.split(",")) {
+            String name = token.trim();
+            if (name.isEmpty()) continue;
+            try {
+                set.add(Tactic.valueOf(name.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                logger.warn("[Warband] '{}' is not a valid tactic in disabledTactics", name);
+            }
+        }
+        return set;
     }
 
     private static void applyProfile() {
@@ -462,6 +535,16 @@ public final class WarbandConfig {
                 antiFarmTier1Crowd = 6;
                 antiFarmTier2Crowd = 10;
                 antiFarmTier3Crowd = 16;
+            }
+            case COOP -> {
+                naturalSquadChanceMax = 0.70;
+                statHealthBonusMax = 0.28;
+                statDamageBonusMax = 0.16;
+                maxSmartMobsPerPlayer = 18;
+                multiplayerSmartMobsPerExtraPlayer = 10;
+                multiplayerEncounterBonusPerExtraPlayer = 0.10;
+                multiplayerDeathMercySeconds = 60;
+                multiplayerDogpilePenalty = 24.0;
             }
         }
     }

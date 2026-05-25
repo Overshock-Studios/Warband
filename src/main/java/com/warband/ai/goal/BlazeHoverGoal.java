@@ -2,6 +2,7 @@ package com.warband.ai.goal;
 
 import com.warband.ai.Squad;
 import com.warband.ai.TacticalEffects;
+import com.warband.entity.Tactic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -10,6 +11,10 @@ import net.minecraft.world.entity.Mob;
 /** Blazes keep vertical fire pressure instead of letting melee pin them. */
 public final class BlazeHoverGoal extends SquadGoal {
 
+    private static final int COOLDOWN_TICKS = 55;
+
+    private BlockPos hover;
+
     public BlazeHoverGoal(Mob mob, Squad squad) {
         super(mob, squad, 1.0);
     }
@@ -17,19 +22,24 @@ public final class BlazeHoverGoal extends SquadGoal {
     @Override
     public boolean canUse() {
         LivingEntity target = visibleTarget();
-        if (target == null || !decisionReady(55)) return false;
+        if (target == null || !cooldownReady()) return false;
 
         double distance = mob.distanceToSqr(target);
         if (distance > 14.0 * 14.0) return false;
 
-        BlockPos hover = target.blockPosition().offset(
+        hover = target.blockPosition().offset(
                 mob.getRandom().nextInt(9) - 4,
                 4 + mob.getRandom().nextInt(3),
                 mob.getRandom().nextInt(9) - 4);
-        boolean moving = moveTo(hover);
-        if (moving) {
+        return true;
+    }
+
+    @Override
+    public void start() {
+        resetCooldown(COOLDOWN_TICKS);
+        if (hover != null && moveTo(hover)) {
+            logTactic(Tactic.BLAZE_HOVER);
             TacticalEffects.signal((ServerLevel) mob.level(), mob);
         }
-        return moving;
     }
 }

@@ -20,9 +20,11 @@ public final class RetreatWhenLowGoal extends SquadGoal {
     private static final int LEASH_TICKS = 20 * 6;
     /** How long the mob then stands and fights before it may flee again. */
     private static final int COMMIT_TICKS = 20 * 5;
+    private static final int COOLDOWN_TICKS = 20;
 
     private int retreatingSince = -1;
     private int commitUntil;
+    private BlockPos retreat;
 
     public RetreatWhenLowGoal(Mob mob, Squad squad) {
         super(mob, squad, 1.25);
@@ -38,7 +40,7 @@ public final class RetreatWhenLowGoal extends SquadGoal {
             return false;
         }
         if (mob.tickCount < commitUntil) return false; // committed, stand and fight
-        if (!decisionReady(20)) return false;
+        if (!cooldownReady()) return false;
 
         if (retreatingSince < 0) {
             retreatingSince = mob.tickCount;
@@ -54,7 +56,15 @@ public final class RetreatWhenLowGoal extends SquadGoal {
         BlockPos threat = target != null ? target.blockPosition() : squad.lastKnownPos();
         if (threat == null) return false;
 
-        BlockPos retreat = awayFrom(threat.getCenter(), 10.0);
-        return retreat != null && moveTo(retreat);
+        retreat = awayFrom(threat.getCenter(), 10.0);
+        return retreat != null;
+    }
+
+    @Override
+    public void start() {
+        resetCooldown(COOLDOWN_TICKS);
+        if (retreat != null) {
+            moveTo(retreat);
+        }
     }
 }

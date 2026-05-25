@@ -124,7 +124,6 @@ public final class SquadCoordinator {
         // off-thread C2ME worldgen). finalizeSpawn → ENTITY_LOAD for fresh main-
         // thread spawns, so the marker is already set and we skip.
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
-            if (!WarbandConfig.squadsEnabled) return;
             if (!(entity instanceof Mob mob)) return;
 
             if (!MobData.isStamped(mob)) {
@@ -132,6 +131,7 @@ public final class SquadCoordinator {
                 SpawnDirector.tryStampLoaded(mob, level);
                 return;
             }
+            if (!WarbandConfig.squadsEnabled) return;
             if (Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.WARBAND_GOALS_BOUND))) return;
 
             MobData data = MobData.get(mob);
@@ -366,65 +366,65 @@ public final class SquadCoordinator {
         }
 
         MobData data = MobData.get(mob);
-        if (data.hasTactic(Tactic.SPIDER_WEB)) {
+        if (hasEnabledTactic(data, Tactic.SPIDER_WEB)) {
             accessor.warband$goalSelector().addGoal(3, new SpiderWebGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.STICKY_PATH)) {
+        if (hasEnabledTactic(data, Tactic.STICKY_PATH)) {
             accessor.warband$goalSelector().addGoal(7, new StickyPathGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.FROST_WALKER)) {
+        if (hasEnabledTactic(data, Tactic.FROST_WALKER)) {
             accessor.warband$goalSelector().addGoal(7, new FrostWalkerGoal(mob));
         }
-        if (data.hasTactic(Tactic.WATER_COMMIT)) {
+        if (hasEnabledTactic(data, Tactic.WATER_COMMIT)) {
             accessor.warband$goalSelector().addGoal(4, new WaterCommitGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.PRESSURE_UNREACHABLE)
-                || data.hasTactic(Tactic.LEAP_UNREACHABLE)
-                || data.hasTactic(Tactic.MOB_STACK_CLIMB)) {
+        if (hasEnabledTactic(data, Tactic.PRESSURE_UNREACHABLE)
+                || hasEnabledTactic(data, Tactic.LEAP_UNREACHABLE)
+                || hasEnabledTactic(data, Tactic.MOB_STACK_CLIMB)) {
             accessor.warband$goalSelector().addGoal(5, new PressureUnreachableGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.SKELETON_SMOKE) && mob instanceof AbstractSkeleton) {
+        if (hasEnabledTactic(data, Tactic.SKELETON_SMOKE) && mob instanceof AbstractSkeleton) {
             accessor.warband$goalSelector().addGoal(2, new SkeletonSmokeGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.CREEPER_STALK)) {
+        if (hasEnabledTactic(data, Tactic.CREEPER_STALK)) {
             accessor.warband$goalSelector().addGoal(4, new CreeperStalkGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.ZOMBIE_HORDE)) {
+        if (hasEnabledTactic(data, Tactic.ZOMBIE_HORDE)) {
             accessor.warband$goalSelector().addGoal(4, new ZombieHordeGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.ENDERMAN_DISRUPT) && mob instanceof EnderMan) {
+        if (hasEnabledTactic(data, Tactic.ENDERMAN_DISRUPT) && mob instanceof EnderMan) {
             accessor.warband$goalSelector().addGoal(3, new EndermanDisruptGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.PIGLIN_SOCIAL)) {
+        if (hasEnabledTactic(data, Tactic.PIGLIN_SOCIAL)) {
             accessor.warband$goalSelector().addGoal(3, new PiglinSocialGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.BLAZE_HOVER)) {
+        if (hasEnabledTactic(data, Tactic.BLAZE_HOVER)) {
             accessor.warband$goalSelector().addGoal(3, new BlazeHoverGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.WITCH_SUPPORT)) {
+        if (hasEnabledTactic(data, Tactic.WITCH_SUPPORT)) {
             accessor.warband$goalSelector().addGoal(3, new WitchSupportGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.SLIME_SURGE)) {
+        if (hasEnabledTactic(data, Tactic.SLIME_SURGE)) {
             accessor.warband$goalSelector().addGoal(4, new SlimeSurgeGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.HOGLIN_STAMPEDE)) {
+        if (hasEnabledTactic(data, Tactic.HOGLIN_STAMPEDE)) {
             accessor.warband$goalSelector().addGoal(4, new HoglinStampedeGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.ILLAGER_COMMAND)) {
+        if (hasEnabledTactic(data, Tactic.ILLAGER_COMMAND)) {
             accessor.warband$goalSelector().addGoal(1, new IllagerRaidAssaultGoal(mob, squad));
             accessor.warband$goalSelector().addGoal(2, new IllagerDoctrineGoal(mob, squad));
             accessor.warband$goalSelector().addGoal(3, new IllagerCommandGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.PHANTOM_HARASS)) {
+        if (hasEnabledTactic(data, Tactic.PHANTOM_HARASS)) {
             accessor.warband$goalSelector().addGoal(3, new PhantomHarassGoal(mob, squad));
         }
         if (WarbandConfig.extendedMobTacticsEnabled
-                && (data.hasTactic(Tactic.GUARDIAN_SURGE)
-                || data.hasTactic(Tactic.SHULKER_LOCKDOWN)
-                || data.hasTactic(Tactic.GHAST_REPOSITION)
-                || data.hasTactic(Tactic.CAVE_SPIDER_AMBUSH)
-                || data.hasTactic(Tactic.RAVAGER_BREAKER)
-                || data.hasTactic(Tactic.WARDEN_PRESSURE))) {
+                && (hasEnabledTactic(data, Tactic.GUARDIAN_SURGE)
+                || hasEnabledTactic(data, Tactic.SHULKER_LOCKDOWN)
+                || hasEnabledTactic(data, Tactic.GHAST_REPOSITION)
+                || hasEnabledTactic(data, Tactic.CAVE_SPIDER_AMBUSH)
+                || hasEnabledTactic(data, Tactic.RAVAGER_BREAKER)
+                || hasEnabledTactic(data, Tactic.WARDEN_PRESSURE))) {
             accessor.warband$goalSelector().addGoal(3, new ExtendedMobTacticGoal(mob, squad));
         }
         // Universal across all stamped undead: when on fire from sunlight, run
@@ -434,6 +434,10 @@ public final class SquadCoordinator {
             accessor.warband$goalSelector().addGoal(1, new SeekShelterGoal(mob));
         }
         mob.setAttached(WarbandAttachments.WARBAND_GOALS_BOUND, true);
+    }
+
+    private static boolean hasEnabledTactic(MobData data, Tactic tactic) {
+        return data.hasTactic(tactic) && WarbandConfig.tacticEnabled(tactic);
     }
 
     /**

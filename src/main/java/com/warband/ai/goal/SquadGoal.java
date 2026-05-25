@@ -1,6 +1,9 @@
 package com.warband.ai.goal;
 
 import com.warband.ai.Squad;
+import com.warband.WarbandMod;
+import com.warband.config.WarbandConfig;
+import com.warband.entity.Tactic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -35,6 +38,14 @@ abstract class SquadGoal extends Goal implements WarbandGoal {
         return true;
     }
 
+    protected boolean cooldownReady() {
+        return mob.tickCount >= nextDecisionTick;
+    }
+
+    protected void resetCooldown(int interval) {
+        nextDecisionTick = mob.tickCount + interval + mob.getRandom().nextInt(interval + 1);
+    }
+
     protected @Nullable LivingEntity visibleTarget() {
         LivingEntity target = mob.getTarget();
         if (target != null && target.isAlive() && mob.hasLineOfSight(target)) {
@@ -45,6 +56,18 @@ abstract class SquadGoal extends Goal implements WarbandGoal {
 
     protected boolean moveTo(BlockPos pos) {
         return mob.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, speed);
+    }
+
+    protected void logTactic(Tactic tactic) {
+        if (!WarbandConfig.debugTacticLogs) return;
+        LivingEntity target = mob.getTarget();
+        WarbandMod.LOGGER.info("[Warband] {} used {} at {} {} {} target={}",
+                mob.getType().toShortString(),
+                tactic.name(),
+                mob.blockPosition().getX(),
+                mob.blockPosition().getY(),
+                mob.blockPosition().getZ(),
+                target == null ? "none" : target.getType().toShortString());
     }
 
     protected @Nullable BlockPos awayFrom(Vec3 threat, double distance) {

@@ -49,7 +49,9 @@ public final class StrongholdGarrison {
             // is false so a mansion is not multiplied, only coordinated.
             if (!SquadCoordinator.assignNaturalSpawn(mob, floor, false)) {
                 SpawnDirector.stampVanillaAi(mob, floor);
-                SquadCoordinator.bindStampedSolo(mob, level);
+                if (WarbandConfig.squadsEnabled) {
+                    SquadCoordinator.bindStampedSolo(mob, level);
+                }
             }
 
             // Exactly one Warmarshal per mansion, the first garrison illager to

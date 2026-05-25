@@ -17,13 +17,19 @@ import java.util.List;
 /** Searches around the last-known position when direct pathing stalls. */
 public final class PressureUnreachableGoal extends SquadGoal {
 
+    private static final int COOLDOWN_TICKS = 80;
+
+    private LivingEntity pressureTarget;
+    private BlockPos searchPos;
+    private Action action = Action.SEARCH;
+
     public PressureUnreachableGoal(Mob mob, Squad squad) {
         super(mob, squad, 1.05);
     }
 
     @Override
     public boolean canUse() {
-        if (!decisionReady(80)) return false;
+        if (!cooldownReady()) return false;
 
         LivingEntity target = visibleTarget();
         BlockPos pressurePoint = target != null ? target.blockPosition() : squad.lastKnownPos();
@@ -34,50 +40,68 @@ public final class PressureUnreachableGoal extends SquadGoal {
         if (!stalled) return false;
 
         MobData data = MobData.get(mob);
-        if (target != null && data.hasTactic(Tactic.LEAP_UNREACHABLE) && tryLeap(target)) {
-            TacticalEffects.search((ServerLevel) mob.level(), mob.position());
+        pressureTarget = target;
+        if (target != null && data.hasTactic(Tactic.LEAP_UNREACHABLE) && canLeap(target)) {
+            action = Action.LEAP;
             return true;
         }
-        if (target != null && data.hasTactic(Tactic.MOB_STACK_CLIMB) && tryStackClimb(target)) {
-            TacticalEffects.signal((ServerLevel) mob.level(), mob);
+        if (target != null && data.hasTactic(Tactic.MOB_STACK_CLIMB) && canStackClimb(target)) {
+            action = Action.STACK_CLIMB;
             return true;
         }
 
         Vec3 offset = new Vec3(mob.getRandom().nextInt(9) - 4, 0, mob.getRandom().nextInt(9) - 4);
-        BlockPos searchPos = BlockPos.containing(pressurePoint.getCenter().add(offset));
-        if (!moveTo(searchPos)) return false;
-
-        TacticalEffects.search((ServerLevel) mob.level(), mob.position());
-        if (squad.canCallBackup()) {
-            SquadCoordinator.callBackup(squad, mob.blockPosition());
-            squad.markBackupCalled();
-        }
+        searchPos = BlockPos.containing(pressurePoint.getCenter().add(offset));
+        action = Action.SEARCH;
         return true;
     }
 
-    private boolean tryLeap(LivingEntity target) {
+    @Override
+    public void start() {
+        resetCooldown(COOLDOWN_TICKS);
+        if (action == Action.LEAP && pressureTarget != null && pressureTarget.isAlive()) {
+            doLeap(pressureTarget);
+            logTactic(Tactic.LEAP_UNREACHABLE);
+            TacticalEffects.search((ServerLevel) mob.level(), mob.position());
+            return;
+        }
+        if (action == Action.STACK_CLIMB && pressureTarget != null && pressureTarget.isAlive()) {
+            doStackClimb(pressureTarget);
+            logTactic(Tactic.MOB_STACK_CLIMB);
+            TacticalEffects.signal((ServerLevel) mob.level(), mob);
+            return;
+        }
+        if (searchPos != null && moveTo(searchPos)) {
+            logTactic(Tactic.PRESSURE_UNREACHABLE);
+            TacticalEffects.search((ServerLevel) mob.level(), mob.position());
+            if (squad.canCallBackup()) {
+                SquadCoordinator.callBackup(squad, mob.blockPosition());
+                squad.markBackupCalled();
+            }
+        }
+    }
+
+    private boolean canLeap(LivingEntity target) {
         Vec3 toTarget = target.position().subtract(mob.position());
         double horizontal = Math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
-        if (horizontal < 2.0 || horizontal > 12.0 || target.getY() < mob.getY() + 1.0) return false;
+        return horizontal >= 2.0 && horizontal <= 12.0 && target.getY() >= mob.getY() + 1.0;
+    }
 
+    private void doLeap(LivingEntity target) {
+        Vec3 toTarget = target.position().subtract(mob.position());
         Vec3 direction = new Vec3(toTarget.x, 0.0, toTarget.z).normalize();
         double lift = Math.min(0.85, 0.35 + (target.getY() - mob.getY()) * 0.12);
         mob.setDeltaMovement(mob.getDeltaMovement().add(direction.scale(0.7)).add(0.0, lift, 0.0));
-        return true;
     }
 
-    private boolean tryStackClimb(LivingEntity target) {
+    private boolean canStackClimb(LivingEntity target) {
         if (target.getY() < mob.getY() + 1.5 || mob.distanceToSqr(target) > 10.0 * 10.0) return false;
+        return stackClimbAlly() != null;
+    }
 
-        AABB box = AABB.ofSize(mob.position(), 7.0, 3.0, 7.0);
-        List<Mob> allies = ((ServerLevel) mob.level()).getEntitiesOfClass(Mob.class, box, ally ->
-                ally != mob
-                        && ally.isAlive()
-                        && MobData.get(ally).squadId() == MobData.get(mob).squadId()
-                        && ally.distanceToSqr(mob) < 4.0 * 4.0);
-        if (allies.isEmpty()) return false;
-
-        Mob ally = allies.get(mob.getRandom().nextInt(allies.size()));
+    private boolean doStackClimb(LivingEntity target) {
+        Mob ally = stackClimbAlly();
+        if (ally == null) return false;
         Vec3 top = ally.position().add(0.0, ally.getBbHeight() + 0.05, 0.0);
         if (mob.position().distanceToSqr(top) > 1.8 * 1.8) {
             return mob.getNavigation().moveTo(top.x, top.y, top.z, 1.2);
@@ -90,5 +114,22 @@ public final class PressureUnreachableGoal extends SquadGoal {
         }
         mob.setDeltaMovement(mob.getDeltaMovement().add(direction).add(0.0, 0.55, 0.0));
         return true;
+    }
+
+    private Mob stackClimbAlly() {
+        AABB box = AABB.ofSize(mob.position(), 7.0, 3.0, 7.0);
+        List<Mob> allies = ((ServerLevel) mob.level()).getEntitiesOfClass(Mob.class, box, ally ->
+                ally != mob
+                        && ally.isAlive()
+                        && MobData.get(ally).squadId() == MobData.get(mob).squadId()
+                        && ally.distanceToSqr(mob) < 4.0 * 4.0);
+        if (allies.isEmpty()) return null;
+        return allies.get(mob.getRandom().nextInt(allies.size()));
+    }
+
+    private enum Action {
+        LEAP,
+        STACK_CLIMB,
+        SEARCH
     }
 }
