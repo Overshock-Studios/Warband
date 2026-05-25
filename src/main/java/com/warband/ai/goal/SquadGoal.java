@@ -26,7 +26,7 @@ abstract class SquadGoal extends Goal implements WarbandGoal {
 
     @Override
     public boolean canContinueToUse() {
-        return canUse() && !mob.getNavigation().isDone();
+        return !mob.getNavigation().isDone();
     }
 
     protected boolean decisionReady(int interval) {

@@ -128,6 +128,7 @@ public final class WarbandCommand {
             return 0;
         }
         SpawnDirector.stamp(zombie, difficulty);
+        SquadCoordinator.bindStampedSolo(zombie, level);
 
         double health = zombie.getMaxHealth();
         source.sendSuccess(() -> Component.literal(String.format(

@@ -48,7 +48,8 @@ public final class StrongholdGarrison {
             // Organize existing garrison residents into squads, spawnFormation
             // is false so a mansion is not multiplied, only coordinated.
             if (!SquadCoordinator.assignNaturalSpawn(mob, floor, false)) {
-                SpawnDirector.stamp(mob, floor);
+                SpawnDirector.stampVanillaAi(mob, floor);
+                SquadCoordinator.bindStampedSolo(mob, level);
             }
 
             // Exactly one Warmarshal per mansion, the first garrison illager to

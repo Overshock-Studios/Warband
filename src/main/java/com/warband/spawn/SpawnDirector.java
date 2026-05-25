@@ -127,7 +127,8 @@ public final class SpawnDirector {
                 || reason == EntitySpawnReason.PATROL
                 || reason == EntitySpawnReason.EVENT;
         if (!SquadCoordinator.assignNaturalSpawn(mob, difficulty, spawnFormation)) {
-            stamp(mob, difficulty);
+            stampVanillaAi(mob, difficulty);
+            SquadCoordinator.bindStampedSolo(mob, level);
         }
     }
 
@@ -136,7 +137,19 @@ public final class SpawnDirector {
      * natural-spawn path and by {@code /warband debug spawn}.
      */
     public static void stamp(Mob mob, double difficulty) {
-        int tactics = Tactic.chooseFor(mob, difficulty, Role.NONE);
+        stamp(mob, difficulty, true);
+    }
+
+    /**
+     * Stamp a mob that was enhanced statistically but was not selected for
+     * tactical AI. Keeping the tactic mask clear prevents reload-only abilities.
+     */
+    public static void stampVanillaAi(Mob mob, double difficulty) {
+        stamp(mob, difficulty, false);
+    }
+
+    private static void stamp(Mob mob, double difficulty, boolean assignTactics) {
+        int tactics = assignTactics ? Tactic.chooseFor(mob, difficulty, Role.NONE) : 0;
         MobData.set(mob, new MobData((float) difficulty, Role.NONE, MobData.NO_SQUAD, tactics));
         IllagerFactionSystem.assignIfNeeded(mob);
         FactionBanner.equipIfNeeded(mob);

@@ -292,6 +292,12 @@ public final class SquadCoordinator {
         return SQUADS.size();
     }
 
+    /** Attach goals for a stamped solo mob so fresh spawns match loaded mobs. */
+    public static void bindStampedSolo(Mob mob, ServerLevel level) {
+        if (!MobData.isStamped(mob)) return;
+        addGoals(mob, new Squad(MobData.NO_SQUAD, level), Role.NONE);
+    }
+
     /** Lookup for perception hooks (e.g. arrow-miss alerts). */
     public static Squad getSquad(int id) {
         return SQUADS.get(id);
@@ -372,7 +378,9 @@ public final class SquadCoordinator {
         if (data.hasTactic(Tactic.WATER_COMMIT)) {
             accessor.warband$goalSelector().addGoal(4, new WaterCommitGoal(mob, squad));
         }
-        if (data.hasTactic(Tactic.PRESSURE_UNREACHABLE)) {
+        if (data.hasTactic(Tactic.PRESSURE_UNREACHABLE)
+                || data.hasTactic(Tactic.LEAP_UNREACHABLE)
+                || data.hasTactic(Tactic.MOB_STACK_CLIMB)) {
             accessor.warband$goalSelector().addGoal(5, new PressureUnreachableGoal(mob, squad));
         }
         if (data.hasTactic(Tactic.SKELETON_SMOKE) && mob instanceof AbstractSkeleton) {
