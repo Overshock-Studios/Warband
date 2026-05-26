@@ -1,80 +1,32 @@
 # Warband
 
-**A mob AI and spawning overhaul where the world fights back with strategy.**
+**A vanilla+ mob AI and difficulty overhaul where the world fights back with strategy.**
 
-Regions learn the power of players who spend time there, and the world gets deadlier. But "deadlier" here doesn't mean bullet-sponge mobs with inflated stats. It means mobs that **think**.
+Warband makes hostile mobs smarter, not spongier. Regions learn from the players who spend time there, squads coordinate around roles and terrain, and illagers become rival factions with grudges, bounty hunters, and strongholds.
 
-> Other difficulty mods only make mobs *stronger*. Warband makes them *smarter*.
+- Tactical mob squads with leaders, bruisers, marksmen, support roles, morale, regrouping, flanking, pressure, and last-known-position searches
+- Regional or distance-based difficulty that respects vanilla difficulty, dimensions, death mercy, and multiplayer presence
+- Mob-family tactics: skeleton smoke screens, spider webs, creeper stalking, zombie surrounds, blaze high-ground pressure, witch support, piglin morale, hoglin stampedes, phantom harassment, and more
+- Multiplayer-aware pressure with threat memory, anti-dogpile targeting, local smart-mob budgets, death mercy areas, and limited shared squad intel
+- Illager factions with doctrines, banners, named ranks, mansion/outpost strongholds, Warmarshals, grudges, bounty hunters, and rival interceptions
+- Boss upgrades, anti-farm behavior, golem support tools, goat horn interactions, debug commands, and a broad `config/warband.properties` tuning surface
 
-## Smarter, Not Spongier
+## Full Documentation -> [Wiki](https://github.com/Overshock-Studios/Warband/wiki)
 
-Stat buffs in Warband are deliberately small, just enough to keep clever mobs relevant. The real threat is **coordination**:
+The wiki covers tactics, mob families, difficulty modes, multiplayer behavior, illager factions, commands, configuration, compatibility, anti-farm behavior, boss abilities, and testing tools.
 
-- **Squads with internal roles.** Mobs spawn as groups: Bruisers that close, Marksmen that kite and break line of sight, Support that buffs, and a Leader whose death breaks the squad's morale.
-- **Real tactics.** They flank, break line of sight around terrain, search last-known positions when they lose you, regroup, pressure unreachable players, and call measured reinforcements.
-- **Smart awareness.** Mobs act on what they could plausibly know: sight, sound, squadmate reports, and the *cues you leave behind*. A missed arrow that thunks into the wall draws a squad's attention to where the shot came from; a solo smart mob may turn on you outright. If they lose track of you, they search your *last known position* so you can still outplay them.
-- **Tiered intelligence.** Simple mobs (basic zombies, spiders, slimes, hoglins) keep a blunt kit: follow the squad, regroup, call backup. Smarter mobs (drowned, skeletons, piglins, illagers, witches, blazes, endermen) get the full tactical kit and retreat when wounded.
-- **Multiplayer-aware pressure.** In co-op fights, squads track player threat, avoid dogpiling one target forever, share limited last-known-position intel with nearby squads, and scale their smart-mob budget by combat area instead of blindly multiplying every mob.
+## Requirements
 
-Every mob family brings its own trick: spider webs and sticky ground, skeleton smoke screens, creepers that stalk from the flank, zombie hordes that surround, blazes that hold the high air, witches that support the line, piglin morale, hoglin stampedes, phantom harassment, guardian and shulker pressure, ravager charges, warden discipline, and more. At high difficulty, creepers also have a chance to spawn naturally charged. Sun-burning undead caught out at dawn run for the nearest shade instead of standing and burning. If you shoot endermen with an arrow, it reappears right in front of you, mad.
+- Fabric API
 
-## The Illager War
-
-Illagers are no longer a loose scatter of mobs, they're **factions**. Five of them, each with its own doctrine, banners, named ranks, and rivals:
-
-- **Black Horn** (Hunt) vs. **Pale Axe** (Siege)
-- **Red Ledger** (Command) vs. **Ash Banner** (Burn)
-- **Iron Choir** (Ambush), a zealot order with no peer, never intercepted by rivals and never intercepting others
-
-- **Strongholds.** Woodland mansions and pillager outposts are faction seats. A mansion is a single faction's capital, defended by an elevated garrison and commanded by one **Warmarshal**, a named apex boss who is the *smartest* illager in the building, directing the fight from behind his line.
-- **Grudges.** Wound a notable illager and let it live, and it remembers. It musters its faction and comes back for you, returning to the very place it happened.
-- **Bounty hunters.** Anger a faction enough and it puts a price on you: a relentless elite enforcer picks up your trail.
-- **Rivalries.** A revenge patrol can be intercepted by a rival faction, a three-way fight you can turn to your advantage.
-- **Group consequences.** Nearby players who participate in a stronghold or field fight can share faction heat, grudges, and revenge-party scaling.
-
-
-## Difficulty
-
-One difficulty scalar drives everything, and you choose how it's derived:
-
-- **Regional** (default). Difficulty follows a running memory of player capability in chunks, backed by vanilla regional difficulty. More players in an area raises the threat. Regional pressure uses timers: sustained presence is required before a cell rises, and decay waits after players leave so co-op fights do not flicker between states.
-- **Distance.** Classic: the further from world spawn, the harder. Distance is always measured from overworld spawn, including in the Nether and End.
-
-Warband respects your vanilla difficulty setting (Peaceful turns it off entirely; Easy and Normal lower its ceiling), can optionally ease off after death, and treats the Nether and End as inherently harsher.
-
-## Multiplayer
-
-Warband is designed for shared servers, not just solo worlds. The multiplayer director adds:
-
-- threat memory per squad, so damage dealers draw attention without permanently trapping one player under the whole squad
-- local smart-mob budgets that scale by nearby active players
-- death mercy areas that briefly reduce encounter pressure near a recent player death
-- shared squad intel in a limited radius, so nearby squads can react to the same fight without global x-ray knowledge
-- profile-aware multiplayer tuning, so `SOFT`, `BALANCED`, and `BRUTAL` adjust both solo and co-op pressure
-
-## The world isn't helpless
-
-Iron golems receive a support upgrade so villages can actually stand against coordinated raiders. Players can also use goat horns to rally golems and disrupt illager squads.
-
-## Bosses, Farms, and Intel
-
-The Wither and Ender Dragon gain Warband phase abilities, warning effects, and late-fight pressure so boss fights are less passive. Boss ability strength scales with your vanilla difficulty setting: Easy hits about 60% as hard, Normal 85%, Hard at full strength, Peaceful disables the abilities entirely.
-
-Obvious mob-farm conditions trigger anti-farm behavior: trapped crowds try to escape, then stop paying loot and XP if the farm remains abusive.
-
-Warband is server-side. Use `/warband difficulty`, `/warband region`, `/warband mobs`, `/warband mobdebug`, `/warband players`, `/warband squads`, `/warband encounter`, and `/warband intel` to inspect local threat, regional memory, stamped mobs, tactics, multiplayer budgets, active squads, and illager faction state. OP debug tools can spawn test mobs, squads, and revenge parties.
+Warband is server-side and can be added to an existing world.
 
 ## Compatibility
 
-**Required**: Fabric API. Warband is server-side and can be freely added to an existing world.
 - **[Illager Invasion](https://modrinth.com/mod/illager-invasion)**: soft, automatic support; its illagers join the faction system.
-- **Structure mods**: mansions and outposts are detected by structure *tag*, so any mod's pillager strongholds can opt in.
-- **[Ascendant Armory](https://modrinth.com/mod/ascendant-armory)**: supported from the Ascension Armory side. Warband-stamped mobs can influence core drops when both mods are installed.
+- **Structure mods**: mansions and outposts are detected by structure tag, so compatible pillager strongholds can opt in.
+- **[Ascendant Armory](https://modrinth.com/mod/ascendant-armory)**: supported from the Ascendant Armory side. Warband-stamped mobs can influence core drops when both mods are installed.
 
-## Configuration
+## License
 
-Everything is tunable in `config/warband.properties`: difficulty mode and regional timers, config profiles, squad sizes, multiplayer budgets and death mercy, stat-buff strength, encounter pacing, disabled tactic lists, debug tactic logs, role visuals/names/cues, anti-farm tiers, XP scaling, boss abilities, extended mob tactics, goat horn behavior, and every illager subsystem.
-
----
-
-*MIT licensed.*
+MIT.
