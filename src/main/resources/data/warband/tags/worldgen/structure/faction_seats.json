@@ -1,5 +1,6 @@
 {
   "values": [
-    { "id": "minecraft:mansion", "required": false }
+    { "id": "minecraft:mansion", "required": false },
+    { "id": "tlc:lost_castle", "required": false }
   ]
 }

@@ -1,5 +1,7 @@
 {
   "values": [
-    { "id": "minecraft:pillager_outpost", "required": false }
+    { "id": "minecraft:pillager_outpost", "required": false },
+    { "id": "illagerinvasion:illager_fort", "required": false },
+    { "id": "illagerinvasion:labyrinth", "required": false }
   ]
 }
