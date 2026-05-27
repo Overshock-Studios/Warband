@@ -104,8 +104,8 @@ public final class WarbandAttachments {
     );
 
     /**
-     * On a player: their capability score ({@code 0.0..1.0}), the input to
-     * SCORE-mode difficulty. Ratchets up instantly, decays down slowly; see
+     * On a player: their capability score ({@code 0.0..1.0}), the per-player
+     * input to REGIONAL difficulty. Ratchets up instantly, decays down slowly; see
      * {@code com.warband.difficulty.PlayerScore}. Persistent and copied across
      * death so difficulty stays consistent session to session.
      */

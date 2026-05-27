@@ -266,7 +266,7 @@ public final class WarbandConfig {
                 # ── Difficulty ────────────────────────────────────────────────────
                 # Preset override: CUSTOM, VANILLA_PLUS (or vanilla+), FANTASY. CUSTOM respects every value below.
                 configProfile=%s
-                # How local difficulty is derived: DISTANCE, SCORE, or REGIONAL.
+                # How local difficulty is derived: DISTANCE or REGIONAL.
                 difficultyMode=%s
                 # Blocks from world spawn that stay fully vanilla (difficulty 0).
                 safeRadius=%d

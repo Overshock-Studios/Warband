@@ -15,7 +15,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 /**
- * Per-player capability score, the input to {@link DifficultyMode#SCORE}.
+ * Per-player capability score, the per-player input to
+ * {@link DifficultyMode#REGIONAL} (stamped into the chunk-grid memory in
+ * {@link RegionalDifficulty}).
  *
  * <p>The score is a stored {@code 0.0..1.0} value, not a live reading. Each
  * second it is compared against a fresh capability <i>sample</i> (gear: worn

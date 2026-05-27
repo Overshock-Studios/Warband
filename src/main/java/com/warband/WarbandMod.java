@@ -25,8 +25,8 @@ import org.slf4j.LoggerFactory;
  * Common entrypoint, runs on dedicated servers and integrated servers.
  *
  * <p>Warband is a vanilla mob AI and spawning overhaul. The world is calm near
- * spawn and grows deadlier the further out you go (distance mode), or as the
- * world ages / the player's score climbs (time / score modes, see
+ * spawn and grows deadlier the further out you go (distance mode), or as nearby
+ * players gear up and stake out territory (regional mode, see
  * {@link com.warband.difficulty.DifficultyMode}). Difficulty buffs not just mob
  * stats but their AI: squad spawns with combat roles, tactical retreat, calling
  * for backup. Applies to standard overworld, Nether, and End mobs.

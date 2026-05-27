@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed stale javadocs and config comments referring to nonexistent SCORE/TIME difficulty modes; the per-player score is the input to REGIONAL, not a mode of its own.
+
 ## 1.2.1
 
 - Tuned bounty hunters down: less bonus health, less speed, no enchanted armor, and no long Speed effect.
