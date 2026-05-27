@@ -46,14 +46,9 @@ public final class BossDirector {
     private static final Map<UUID, UUID> WITHER_MINION_OWNER = new HashMap<>();
     private static final Map<UUID, BossFightState> WITHER_STATE = new HashMap<>();
     private static final Map<UUID, BossFightState> DRAGON_STATE = new HashMap<>();
-    /** Boss ability intensity, derived from vanilla difficulty. Peaceful = 0 (abilities skipped). */
+    /** Boss ability intensity is fixed; Peaceful skips abilities entirely. */
     private static double bossIntensity(ServerLevel level) {
-        return switch (level.getDifficulty()) {
-            case PEACEFUL -> 0.0;
-            case EASY -> 0.6;
-            case NORMAL -> 0.85;
-            case HARD -> 1.0;
-        };
+        return level.getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL ? 0.0 : 1.0;
     }
     private static int tickCounter;
     private static boolean spawningWitherMinion;

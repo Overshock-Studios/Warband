@@ -18,8 +18,11 @@ public final class IllagerFactionSystem {
 
     public static void assignIfNeeded(Mob mob) {
         if (!WarbandConfig.illagerFactionsEnabled) return;
-        if (!IllagerInvasionCompat.isIllagerLike(mob) || mob.hasAttached(WarbandAttachments.ILLAGER_FACTION)) return;
-        setFaction(mob, chooseFaction(mob));
+        if (!IllagerInvasionCompat.isIllagerLike(mob)) return;
+        if (!mob.hasAttached(WarbandAttachments.ILLAGER_FACTION)) {
+            setFaction(mob, chooseFaction(mob));
+        }
+        assignSeatKeyIfNeeded(mob);
     }
 
     public static void setFaction(Mob mob, IllagerFaction faction) {
@@ -52,6 +55,16 @@ public final class IllagerFactionSystem {
         int regionZ = Math.floorDiv(mob.getBlockZ(), 512);
         int seed = regionX * 734_287 + regionZ * 912_271 + mob.level().dimension().hashCode();
         return IllagerFaction.pick(seed);
+    }
+
+    private static void assignSeatKeyIfNeeded(Mob mob) {
+        if (mob.hasAttached(WarbandAttachments.STRONGHOLD_SEAT_KEY)) return;
+        if (!(mob.level() instanceof ServerLevel level)) return;
+        if (!StructureCompat.inFactionSeat(level, mob.blockPosition())) return;
+        Integer seed = StructureCompat.strongholdSeed(level, mob.blockPosition());
+        if (seed != null) {
+            mob.setAttached(WarbandAttachments.STRONGHOLD_SEAT_KEY, SeatOfPowerState.key(level, seed));
+        }
     }
 
     private static IllagerFaction nearbyRaidFaction(Mob mob) {

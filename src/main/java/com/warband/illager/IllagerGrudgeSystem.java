@@ -25,6 +25,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.PatrollingMonster;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 
@@ -110,6 +112,7 @@ public final class IllagerGrudgeSystem {
             return;
         }
         if (isGrudgeSpawned(mob)) return;
+        if (isBrokenSeatMob(mob)) return;
         // Only badly wounded illagers stir their comrades, and only the first such
         // hit scans, the victim lands in PENDING below, so a drawn-out fight is
         // not a per-swing entity scan.
@@ -125,13 +128,16 @@ public final class IllagerGrudgeSystem {
     }
 
     private static void afterDeath(LivingEntity entity, DamageSource source) {
+        boolean warmarshalSlain = handleWarmarshalDeath(entity, source);
         if (WarbandConfig.illagerGrudgesEnabled
                 && entity instanceof Mob mob
                 && source.getEntity() instanceof ServerPlayer player
                 && IllagerInvasionCompat.isIllagerLike(mob)
                 && MobData.isStamped(mob)
                 && !isGrudgeSpawned(mob)
-                && !RaidCompat.isActiveRaider(mob)) {
+                && !RaidCompat.isActiveRaider(mob)
+                && !warmarshalSlain
+                && !isBrokenSeatMob(mob)) {
             IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
             long now = mob.level().getGameTime();
             if (inFactionSeat(mob)) {
@@ -154,21 +160,47 @@ public final class IllagerGrudgeSystem {
                 }
             }
         }
-        handleWarmarshalDeath(entity, source);
+        maybeDropBountyReward(entity);
         PENDING.remove(entity.getUUID());
     }
 
-    /** A slain Warmarshal breaks its faction, clears the killer's grudges and heat with it. */
-    private static void handleWarmarshalDeath(LivingEntity entity, DamageSource source) {
+    private static void maybeDropBountyReward(LivingEntity entity) {
         if (!(entity instanceof Mob mob)) return;
-        if (!Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.WARMARSHAL))) return;
-        if (!(source.getEntity() instanceof ServerPlayer player)) return;
+        if (!Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_HUNTER))) return;
+        RandomSource random = mob.getRandom();
+        mob.spawnAtLocation((ServerLevel) mob.level(), new ItemStack(Items.EMERALD, 6 + random.nextInt(7)));
+        mob.spawnAtLocation((ServerLevel) mob.level(), new ItemStack(Items.EXPERIENCE_BOTTLE, 2 + random.nextInt(4)));
+        if (random.nextFloat() < 0.45f) {
+            mob.spawnAtLocation((ServerLevel) mob.level(), new ItemStack(Items.GOLDEN_APPLE));
+        }
+        if (random.nextFloat() < 0.20f) {
+            mob.spawnAtLocation((ServerLevel) mob.level(), new ItemStack(Items.DIAMOND));
+        }
+        if (random.nextFloat() < 0.18f) {
+            mob.spawnAtLocation((ServerLevel) mob.level(), new ItemStack(Items.OMINOUS_BOTTLE));
+        }
+    }
+
+    /** A slain Warmarshal breaks its faction, clears the killer's grudges and heat with it. */
+    private static boolean handleWarmarshalDeath(LivingEntity entity, DamageSource source) {
+        if (!(entity instanceof Mob mob)) return false;
+        if (!Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.WARMARSHAL))) return false;
+        if (!(source.getEntity() instanceof ServerPlayer player)) return false;
 
         IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
+        if (mob.level() instanceof ServerLevel level) {
+            String key = mob.getAttached(WarbandAttachments.STRONGHOLD_SEAT_KEY);
+            if (key != null && !key.isEmpty()) {
+                StrongholdGarrison.markSeatBroken(level, key);
+            } else {
+                StrongholdGarrison.markSeatBroken(level, mob.blockPosition());
+            }
+        }
         clearFaction(player, faction);
         WarbandCriteria.fire((ServerPlayer) source.getEntity(), WarbandCriteria.WARMARSHAL_SLAIN);
         player.sendSystemMessage(Component.literal(
                 "The " + faction.displayName() + " falls into disarray, its Warmarshal is dead."));
+        return true;
     }
 
     /** Wipe a faction's grudges and reputation from a player, its war with them is over. */
@@ -186,6 +218,15 @@ public final class IllagerGrudgeSystem {
     private static boolean inFactionSeat(Mob mob) {
         return mob.level() instanceof ServerLevel level
                 && StructureCompat.inFactionSeat(level, mob.blockPosition());
+    }
+
+    private static boolean isBrokenSeatMob(Mob mob) {
+        if (!(mob.level() instanceof ServerLevel level)) return false;
+        String attachedKey = mob.getAttached(WarbandAttachments.STRONGHOLD_SEAT_KEY);
+        if (attachedKey != null && !attachedKey.isEmpty() && SeatOfPowerState.get(level).isBroken(attachedKey)) {
+            return true;
+        }
+        return StrongholdGarrison.isSeatBroken(level, mob.blockPosition());
     }
 
     private static void recordWitnesses(ServerLevel level, Mob victim, ServerPlayer player,
@@ -547,20 +588,19 @@ public final class IllagerGrudgeSystem {
         buffBountyHunter(hunter);
         equipBountyHunter(hunter);
         directVengeancePursuit(hunter, player);
-        // Resistance II + Jump Boost II + Strength I — feels like a duel, not a fight.
+        // Jump Boost + Strength: dangerous, but no longer carried by armor enchants or high speed.
         int buffTicks = 20 * 60 * 10;
         hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                 net.minecraft.world.effect.MobEffects.STRENGTH, buffTicks, 0, false, true));
         hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                 net.minecraft.world.effect.MobEffects.JUMP_BOOST, buffTicks, 1, false, true));
-        hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                net.minecraft.world.effect.MobEffects.RESISTANCE, buffTicks, 0, false, true));
         var selector = ((com.warband.mixin.MobGoalSelectorAccessor) hunter).warband$goalSelector();
         if (hunter instanceof net.minecraft.world.entity.PathfinderMob path) {
             selector.addGoal(1, new com.warband.ai.goal.BountyMeleeGoal(path));
         }
         selector.addGoal(2, new com.warband.ai.goal.BountyClimbGoal(hunter));
-        selector.addGoal(3, new com.warband.ai.goal.BountyChaseGoal(hunter, 1.2));
+        selector.addGoal(2, new com.warband.ai.goal.BountyWindChargeGoal(hunter));
+        selector.addGoal(3, new com.warband.ai.goal.BountyChaseGoal(hunter, 1.05));
         selector.addGoal(4, new com.warband.ai.goal.BountyMarkGoal(hunter));
         selector.addGoal(4, new com.warband.ai.goal.BountyStalkGoal(hunter));
         selector.addGoal(5, new com.warband.ai.goal.BountyTauntGoal(hunter));
@@ -660,12 +700,12 @@ public final class IllagerGrudgeSystem {
         return data.role() == Role.LEADER || data.difficulty() >= 0.65f;
     }
 
-    /** Full diamond kit, enchanted, very rare drops — looks the part of a legendary hunter. */
+    /** Full diamond kit, but armor is plain so the fight is not over-tuned. */
     private static void equipBountyHunter(Mob hunter) {
-        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.item.Items.DIAMOND_HELMET, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 4);
-        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.item.Items.DIAMOND_CHESTPLATE, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 4);
-        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.item.Items.DIAMOND_LEGGINGS, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 3);
-        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.FEET, net.minecraft.world.item.Items.DIAMOND_BOOTS, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 3);
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.item.Items.DIAMOND_HELMET);
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.item.Items.DIAMOND_CHESTPLATE);
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.item.Items.DIAMOND_LEGGINGS);
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.FEET, net.minecraft.world.item.Items.DIAMOND_BOOTS);
 
         // Crossbow stays in main hand for ranged engagement; offhand carries the sword
         // for melee swings driven by BountyMeleeGoal.
@@ -685,10 +725,8 @@ public final class IllagerGrudgeSystem {
     }
 
     private static void equipDiamond(Mob hunter, net.minecraft.world.entity.EquipmentSlot slot,
-                                     net.minecraft.world.item.Item item,
-                                     net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> ench, int lvl) {
-        net.minecraft.world.item.ItemStack stack = enchantStack(hunter, new net.minecraft.world.item.ItemStack(item), ench, lvl);
-        enchantStack(hunter, stack, net.minecraft.world.item.enchantment.Enchantments.UNBREAKING, 3);
+                                     net.minecraft.world.item.Item item) {
+        net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(item);
         hunter.setItemSlot(slot, stack);
         hunter.setDropChance(slot, 0.01f);
     }
@@ -705,13 +743,20 @@ public final class IllagerGrudgeSystem {
     /** Apex-tier stats: real fight, but not a damage sponge. Diamond armor + revive carry the durability. */
     private static void buffBountyHunter(Mob hunter) {
         com.warband.spawn.SpawnDirector.addFlat(hunter, net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH,
-                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_health"), 26.0);
+                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_health"), 16.0);
         com.warband.spawn.SpawnDirector.addFlat(hunter, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE,
                 com.warband.spawn.SpawnDirector.warbandModifierId("bounty_damage"), 6.0);
         com.warband.spawn.SpawnDirector.addFlat(hunter, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE,
                 com.warband.spawn.SpawnDirector.warbandModifierId("bounty_kb"), 0.5);
         com.warband.spawn.SpawnDirector.addMultiplied(hunter, net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED,
-                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_speed"), 0.15);
+                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_speed"), 0.05);
+        var scale = hunter.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE);
+        if (scale != null && !scale.hasModifier(com.warband.spawn.SpawnDirector.warbandModifierId("bounty_scale"))) {
+            scale.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    com.warband.spawn.SpawnDirector.warbandModifierId("bounty_scale"),
+                    -0.08,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        }
         hunter.setHealth(hunter.getMaxHealth());
     }
 
@@ -722,6 +767,7 @@ public final class IllagerGrudgeSystem {
             patroller.setPatrolTarget(player.blockPosition());
         }
         mob.getNavigation().moveTo(player, 1.1);
+        if (Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_HUNTER))) return;
         // 5 minutes of Speed I so they cover distance to the player rather than dawdling.
         mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                 net.minecraft.world.effect.MobEffects.SPEED, 20 * 60 * 5, 0, false, true));

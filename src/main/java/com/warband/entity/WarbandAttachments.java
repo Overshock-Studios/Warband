@@ -87,6 +87,12 @@ public final class WarbandAttachments {
             builder -> builder.persistent(Codec.BOOL)
     );
 
+    /** Per-mob marker: faction seat key for illagers that belong to a mansion-tier stronghold. */
+    public static final AttachmentType<String> STRONGHOLD_SEAT_KEY = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "stronghold_seat_key"),
+            builder -> builder.persistent(Codec.STRING)
+    );
+
     /** Transient marker: this mob already has its Warband AI goals attached. */
     public static final AttachmentType<Boolean> WARBAND_GOALS_BOUND = AttachmentRegistry.create(
             Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "warband_goals_bound")

@@ -29,12 +29,6 @@ public final class WarbandConfig {
     public static int regionalSpawnRampBlocks = 32;
     /** Distance from spawn at which difficulty caps (DISTANCE mode). */
     public static int maxDifficultyRadius = 4096;
-    /** If true, Peaceful disables Warband and Easy/Normal lower its ceiling. */
-    public static boolean respectGlobalDifficulty = true;
-    /** If true, vanilla regional difficulty contributes as a weighted floor. */
-    public static boolean factorVanillaDifficulty = false;
-    /** Strength of vanilla regional difficulty when enabled. */
-    public static double vanillaRegionalDifficultyWeight = 0.35;
     /** Optional mercy window after death. 0 disables relief and keeps regional pressure honest. */
     public static int deathReliefSeconds = 0;
     /** How much relief eases difficulty when enabled: 0.0 none .. 1.0 full calm. */
@@ -168,9 +162,6 @@ public final class WarbandConfig {
         difficultyMode = parseMode(props, difficultyMode, logger);
         safeRadius = parseInt(props, "safeRadius", safeRadius, 0, 100_000, logger);
         maxDifficultyRadius = parseInt(props, "maxDifficultyRadius", maxDifficultyRadius, 1, 1_000_000, logger);
-        respectGlobalDifficulty = parseBoolean(props, "respectGlobalDifficulty", respectGlobalDifficulty, logger);
-        factorVanillaDifficulty = parseBoolean(props, "factorVanillaDifficulty", factorVanillaDifficulty, logger);
-        vanillaRegionalDifficultyWeight = parseDouble(props, "vanillaRegionalDifficultyWeight", vanillaRegionalDifficultyWeight, 0.0, 1.0, logger);
         deathReliefSeconds = parseInt(props, "deathReliefSeconds", deathReliefSeconds, 0, 100_000, logger);
         deathReliefStrength = parseDouble(props, "deathReliefStrength", deathReliefStrength, 0.0, 1.0, logger);
         scoreDecayRate = parseDouble(props, "scoreDecayRate", scoreDecayRate, 0.0, 1.0, logger);
@@ -283,11 +274,6 @@ public final class WarbandConfig {
                 regionalSpawnRampBlocks=%d
                 # Distance from spawn at which difficulty caps (DISTANCE mode).
                 maxDifficultyRadius=%d
-                # Peaceful disables Warband; Easy/Normal lower its difficulty ceiling.
-                respectGlobalDifficulty=%s
-                # Fold vanilla regional difficulty in as a weighted floor.
-                factorVanillaDifficulty=%s
-                vanillaRegionalDifficultyWeight=%s
                 # Optional mercy window after death. 0 disables relief and keeps regional pressure honest.
                 deathReliefSeconds=%d
                 # How much a death eases difficulty when enabled: 0.0 none .. 1.0 full calm.
@@ -431,9 +417,6 @@ public final class WarbandConfig {
                     safeRadius,
                     regionalSpawnRampBlocks,
                     maxDifficultyRadius,
-                    respectGlobalDifficulty,
-                    factorVanillaDifficulty,
-                    vanillaRegionalDifficultyWeight,
                     deathReliefSeconds,
                     deathReliefStrength,
                     scoreDecayRate,

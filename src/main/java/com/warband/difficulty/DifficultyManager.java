@@ -3,7 +3,6 @@ package com.warband.difficulty;
 import com.warband.config.WarbandConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -17,9 +16,8 @@ import org.jetbrains.annotations.Nullable;
  * to stamp this value onto each mob (see {@link com.warband.entity.MobData}) at
  * spawn, so a mob carries its own difficulty.
  *
- * <p>The vanilla difficulty setting is always honored when
- * {@code respectGlobalDifficulty} is on: Peaceful forces {@code 0.0}, and
- * Easy/Normal lower the base value before harsh dimension bonuses are applied.
+ * <p>Vanilla difficulty does not scale Warband. Peaceful is the only special
+ * case, because hostile AI should not run when the world is peaceful.
  */
 public final class DifficultyManager {
 
@@ -36,22 +34,12 @@ public final class DifficultyManager {
      * for API symmetry but no current mode uses it. Normalized {@code 0.0 .. 1.0}.
      */
     public static double getDifficulty(ServerLevel level, BlockPos pos, @Nullable Player player) {
-        Difficulty global = level.getLevelData().getDifficulty();
-        if (WarbandConfig.respectGlobalDifficulty && global == Difficulty.PEACEFUL) {
+        if (level.getLevelData().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
             return 0.0;
         }
 
         double value = rawDifficulty(level, pos, player);
 
-        // Only sample vanilla regional difficulty if the chunk is already loaded.
-        // Calling getCurrentDifficultyAt during a finalizeSpawn that fires from
-        // C2ME worldgen would force-load the chunk we are currently generating,
-        // deadlocking the server thread against the worldgen worker.
-        if (WarbandConfig.factorVanillaDifficulty && level.hasChunkAt(pos)) {
-            double vanillaFloor = level.getCurrentDifficultyAt(pos).getSpecialMultiplier()
-                    * WarbandConfig.vanillaRegionalDifficultyWeight;
-            value = Math.max(value, vanillaFloor);
-        }
         // Spawn-safe scaling for REGIONAL mode (DISTANCE already bakes a long
         // world-distance ramp in): the immediate spawn area stays calm, then
         // regional memory takes over quickly. Using maxDifficultyRadius here
@@ -65,9 +53,6 @@ public final class DifficultyManager {
         if (!insideOverworldSafeRadius(level, pos)) {
             value += dimensionBonus(level);
             value += overworldDepthBonus(level, pos);
-        }
-        if (WarbandConfig.respectGlobalDifficulty) {
-            value *= globalCeiling(global);
         }
         return clamp01(value);
     }
@@ -132,7 +117,7 @@ public final class DifficultyManager {
         return 0.0;
     }
 
-    /** The raw scalar from the configured mode, before vanilla-difficulty adjustment. */
+    /** The raw scalar from the configured mode, before spawn/depth/dimension adjustment. */
     private static double rawDifficulty(ServerLevel level, BlockPos pos, @Nullable Player player) {
         return switch (WarbandConfig.difficultyMode) {
             case DISTANCE -> distanceDifficulty(level, pos);
@@ -153,16 +138,6 @@ public final class DifficultyManager {
         double safe = WarbandConfig.safeRadius;
         double max = Math.max(safe + 1.0, WarbandConfig.maxDifficultyRadius);
         return clamp01((dist - safe) / (max - safe));
-    }
-
-    /** Easy/Normal lower the ceiling; Hard is full; Peaceful is handled earlier. */
-    private static double globalCeiling(Difficulty global) {
-        return switch (global) {
-            case PEACEFUL -> 0.0;
-            case EASY -> 0.6;
-            case NORMAL -> 0.85;
-            case HARD -> 1.0;
-        };
     }
 
     private static double clamp01(double v) {

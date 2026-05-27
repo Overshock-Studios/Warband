@@ -5,7 +5,7 @@
 Warband makes hostile mobs smarter, not spongier. Regions learn from the players who spend time there, squads coordinate around roles and terrain, and illagers become rival factions with grudges, bounty hunters, and strongholds.
 
 - Tactical mob squads with leaders, bruisers, marksmen, support roles, morale, regrouping, flanking, pressure, and last-known-position searches
-- Regional or distance-based difficulty that respects vanilla difficulty, dimensions, death mercy, and multiplayer presence
+- Regional or distance-based difficulty with depth scaling, dimension pressure, death mercy, and multiplayer presence
 - Mob-family tactics: skeleton smoke screens, spider webs, creeper stalking, zombie surrounds, blaze high-ground pressure, witch support, piglin morale, hoglin stampedes, phantom harassment, and more
 - Multiplayer-aware pressure with threat memory, anti-dogpile targeting, local smart-mob budgets, death mercy areas, and limited shared squad intel
 - Illager factions with doctrines, banners, named ranks, mansion/outpost strongholds, Warmarshals, grudges, bounty hunters, and rival interceptions
@@ -24,6 +24,7 @@ Warband is server-side and can be added to an existing world.
 ## Compatibility
 
 - **[Illager Invasion](https://modrinth.com/mod/illager-invasion)**: soft, automatic support; its illagers join the faction system.
+- **[The Lost Castle](https://modrinth.com/mod/the-lost-castle)**: its castle is treated as a faction seat.
 - **Structure mods**: mansions and outposts are detected by structure tag, so compatible pillager strongholds can opt in.
 - **[Ascendant Armory](https://modrinth.com/mod/ascendant-armory)**: supported from the Ascendant Armory side. Warband-stamped mobs can influence core drops when both mods are installed.
 - **[True Ending](https://modrinth.com/mod/true-ending)**: auto-detected. When loaded, Warband's Ender Dragon phase abilities are suppressed so True Ending's dragon overhaul runs unobstructed; Wither abilities are unaffected.

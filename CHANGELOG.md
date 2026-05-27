@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+- Tuned bounty hunters down: less bonus health, less speed, no enchanted armor, and no long Speed effect.
+- Improved bounty hunter pursuit: smaller hitbox scale for two-block gaps and wind-charge jumps for vertical targets.
+- Improved bounty hunter rewards with stronger vanilla loot: more emeralds, XP bottles, and occasional supplies.
+- Fixed faction-seat state: Warmarshal crowns/broken seats persist, broken seats stop creating new heat/grudges, and Illager Invasion Invokers are prioritized as Warmarshals when present.
+- Removed Warband's vanilla-difficulty scaling hooks; Easy/Normal/Hard no longer scale Warband difficulty or boss ability damage.
+
 ## 1.2.0
 
 - Added Illager War advancements, including mansion entry, faction milestones, bounty, crusade, and Warmarshal kill progress.
@@ -22,7 +30,7 @@
 - Split `bossAbilitiesEnabled` into `witherAbilitiesEnabled` and `enderDragonAbilitiesEnabled` so each boss can be toggled independently. Existing `bossAbilitiesEnabled` values are read once as the default for both new keys.
 - Auto-disable Warband Ender Dragon abilities when [True Ending](https://modrinth.com/mod/true-ending) is loaded — detects both the Fabric mod (`mr_true_ending`) and the datapack distribution (via the `true_ending` data namespace), and re-checks on `/reload`.
 - Added `/warband reload` (op-only) to re-read `config/warband.properties` without restarting the world.
-- `factorVanillaDifficulty` default flipped to `false`. Vanilla difficulty already scales mob stats on its own and Warband already respects vanilla via the global ceiling; the extra floor was double-dipping and caused sudden jumps when toggling vanilla difficulty.
+- Reduced vanilla difficulty double-dipping by disabling the vanilla regional floor by default.
 - Regional difficulty ramps faster by default:
   - `regionalIncreaseDelaySeconds` 10 → 0
   - `regionalBlendRate` 0.08 → 0.20

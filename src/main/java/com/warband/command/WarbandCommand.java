@@ -202,7 +202,7 @@ public final class WarbandCommand {
         source.sendSuccess(() -> Component.literal(
                 String.format("[Warband] Local difficulty: %.2f", difficulty)), false);
         source.sendSuccess(() -> Component.literal(String.format(
-                "  mode=%s  vanilla=%s",
+                "  mode=%s  world=%s",
                 WarbandConfig.difficultyMode,
                 level.getLevelData().getDifficulty().getSerializedName())), false);
         if (WarbandConfig.difficultyMode == com.warband.difficulty.DifficultyMode.REGIONAL) {

@@ -48,6 +48,17 @@ public final class IllagerInvasionCompat {
         return "basher".equals(path) || "inquisitor".equals(path);
     }
 
+    public static boolean isInvoker(Mob mob) {
+        return "invoker".equals(path(mob));
+    }
+
+    public static boolean isSeatBossCandidate(Mob mob) {
+        return switch (path(mob)) {
+            case "invoker", "provoker", "inquisitor" -> true;
+            default -> false;
+        };
+    }
+
     public static String roleTitle(Mob mob) {
         return switch (path(mob)) {
             case "alchemist" -> "Alchemist";
