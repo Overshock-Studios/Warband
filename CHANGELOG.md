@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
 
 - Added Illager War advancements, including mansion entry, faction milestones, bounty, crusade, and Warmarshal kill progress.
 - Added modded stronghold support: Illager Invasion forts/labyrinths are faction camps, and The Lost Castle is a faction seat.
@@ -11,9 +11,8 @@
 - Changed config presets to `CUSTOM`, `VANILLA_PLUS` (`vanilla+` accepted), and `FANTASY`; Vanilla+ disables the more RPG-facing systems by default.
 - Changed REGIONAL spawn protection: `safeRadius` now applies in REGIONAL mode, with a separate `regionalSpawnRampBlocks` ramp and tighter defaults.
 - Fixed Warmarshal Illusioner conversion reliability in worlds without Illager Invasion.
-- Fixed revenge, war, crusade, and bounty patrols not immediately pathing toward the target player.
-- Fixed revenge, crusade, and bounty leader nametags rendering through walls.
-- Fixed bounty hunters staying stuck on crossbows in melee.
+- Fixed revenge and bounty patrols not immediately pathing toward the target player.
+- Fixed revenge and bounty leader nametags rendering through walls.
 - Fixed rare false-death states where normal Warband-stamped mobs could play death animation/audio but keep fighting.
 - Fixed faction heat not tracking when bounty hunters were disabled.
 - Fixed revenge grudges expiring from missed random spawn rolls instead of real failed spawn attempts.
