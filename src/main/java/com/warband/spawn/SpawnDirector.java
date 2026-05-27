@@ -181,22 +181,46 @@ public final class SpawnDirector {
      * a heavy boss health/damage layer and lasting Strength, and renamed.
      */
     public static void crownWarmarshal(Mob mob) {
+        // Without Illager Invasion installed, the natural mansion boss is just an
+        // Evoker — same as any other mansion mob. Promote it to a vanilla Illusioner,
+        // which is otherwise non-spawning, so the Warmarshal reads as a distinct
+        // apex enemy. Skip the swap when Illager Invasion is loaded; let its boss
+        // tier (Invoker/Provoker) stand as the Warmarshal in its own right.
+        Mob warmarshal = maybeSwapToIllusioner(mob);
         // The command-AI upgrade: guarantees command goals and squad leadership,
         // and sets the mob's MobData (difficulty 1.0, LEADER, ILLAGER_COMMAND).
         // A Warmarshal is the smartest illager in the garrison, not just the
         // strongest, without this it would be the bounty-hunter mistake again.
-        SquadCoordinator.makeCommander(mob, 1.0);
+        SquadCoordinator.makeCommander(warmarshal, 1.0);
         if (WarbandConfig.statBuffsEnabled) {
-            addMultiplied(mob, Attributes.MAX_HEALTH, WARMARSHAL_HEALTH, WarbandConfig.warmarshalHealthBonus);
-            addMultiplied(mob, Attributes.ATTACK_DAMAGE, WARMARSHAL_DAMAGE, WarbandConfig.warmarshalDamageBonus);
-            mob.setHealth(mob.getMaxHealth());
+            addMultiplied(warmarshal, Attributes.MAX_HEALTH, WARMARSHAL_HEALTH, WarbandConfig.warmarshalHealthBonus);
+            addMultiplied(warmarshal, Attributes.ATTACK_DAMAGE, WARMARSHAL_DAMAGE, WarbandConfig.warmarshalDamageBonus);
+            warmarshal.setHealth(warmarshal.getMaxHealth());
         }
         // Strength, not Resistance: a Warmarshal is hard through health, damage,
         // its garrison and AI, never a damage sponge.
-        mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+        warmarshal.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                 net.minecraft.world.effect.MobEffects.STRENGTH, 20 * 60 * 60, 1, false, true));
-        mob.setAttached(WarbandAttachments.WARMARSHAL, true);
-        IllagerIdentity.promoteToWarmarshal(mob);
+        warmarshal.setAttached(WarbandAttachments.WARMARSHAL, true);
+        IllagerIdentity.promoteToWarmarshal(warmarshal);
+    }
+
+    private static Mob maybeSwapToIllusioner(Mob mob) {
+        if (IllagerInvasionCompat.isLoaded()) return mob;
+        if (!(mob instanceof net.minecraft.world.entity.monster.illager.Evoker)) return mob;
+        if (!(mob.level() instanceof ServerLevel level)) return mob;
+        net.minecraft.world.entity.monster.illager.Illusioner illusioner =
+                EntityType.ILLUSIONER.create(level, EntitySpawnReason.EVENT);
+        if (illusioner == null) return mob;
+        illusioner.snapTo(mob.getX(), mob.getY(), mob.getZ(), mob.getYRot(), mob.getXRot());
+        var factionData = mob.getAttached(WarbandAttachments.ILLAGER_FACTION);
+        if (factionData != null) {
+            illusioner.setAttached(WarbandAttachments.ILLAGER_FACTION, factionData);
+        }
+        level.addFreshEntity(illusioner);
+        mob.discard();
+        FactionBanner.equipIfNeeded(illusioner);
+        return illusioner;
     }
 
     private static void applyStatBuffs(Mob mob, double difficulty) {

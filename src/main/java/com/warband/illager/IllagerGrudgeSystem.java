@@ -257,6 +257,7 @@ public final class IllagerGrudgeSystem {
                 survivor.originPos, survivor.originDimension));
         player.setAttached(WarbandAttachments.ILLAGER_GRUDGES, trim(grudges));
         addReputation(player, survivor.faction, 20, readyAt + BOUNTY_RETRY_TICKS);
+        // "Slipped away" introduces a named survivor — keep this in chat, not action bar.
         player.sendSystemMessage(Component.literal(
                 survivor.name + " slipped away, the " + survivor.faction.displayName()
                         + " will remember this."));
@@ -362,8 +363,8 @@ public final class IllagerGrudgeSystem {
         }
 
         maybeSpawnRivalInterception(player, grudges.getFirst(), origin, difficulty, spawned);
-        TacticalEffects.horn(level, origin.getCenter());
-        player.sendSystemMessage(Component.literal("Familiar horns answer from the " + faction.displayName() + "."));
+        TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.REVENGE);
+        player.sendSystemMessage(Component.literal("Familiar horns answer from the " + faction.displayName() + "."), true);
         return true;
     }
 
@@ -450,9 +451,9 @@ public final class IllagerGrudgeSystem {
         }
         if (spawned.isEmpty()) return false;
         SquadCoordinator.createSquad(level, spawned, difficulty);
-        TacticalEffects.horn(level, origin.getCenter());
+        TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.WAR_PATROL);
         player.sendSystemMessage(Component.literal(
-                "A war patrol of the " + reputation.faction().displayName() + " moves to find you."));
+                "A war patrol of the " + reputation.faction().displayName() + " moves to find you."), true);
         return true;
     }
 
@@ -488,9 +489,9 @@ public final class IllagerGrudgeSystem {
         Mob leader = spawned.getFirst();
         leader.setCustomName(Component.literal("Crusade Captain of the " + reputation.faction().displayName()));
         leader.setCustomNameVisible(true);
-        TacticalEffects.horn(level, origin.getCenter());
+        TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.CRUSADE);
         player.sendSystemMessage(Component.literal(
-                "A crusade of the " + reputation.faction().displayName() + " has come for you."));
+                "A crusade of the " + reputation.faction().displayName() + " has come for you."), true);
         return true;
     }
 
@@ -514,8 +515,8 @@ public final class IllagerGrudgeSystem {
         int buffTicks = 20 * 60 * 2;
         hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SPEED, buffTicks, 1, false, true));
         hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH, buffTicks, 0, false, true));
-        TacticalEffects.horn(level, origin.getCenter());
-        player.sendSystemMessage(Component.literal("A bounty hunter from the " + reputation.faction().displayName() + " has your trail."));
+        TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.BOUNTY);
+        player.sendSystemMessage(Component.literal("A bounty hunter from the " + reputation.faction().displayName() + " has your trail."), true);
         return true;
     }
 
@@ -552,7 +553,7 @@ public final class IllagerGrudgeSystem {
         leader.setCustomNameVisible(true);
         player.sendSystemMessage(Component.literal(
                 "Rivals from the " + rival.displayName() + " move to intercept the "
-                        + grudge.faction().displayName() + "."));
+                        + grudge.faction().displayName() + "."), true);
     }
 
     private static Mob spawnMember(ServerLevel level, BlockPos pos, double difficulty, int index) {

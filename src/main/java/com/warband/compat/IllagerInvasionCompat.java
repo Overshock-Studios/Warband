@@ -14,6 +14,10 @@ public final class IllagerInvasionCompat {
     private IllagerInvasionCompat() {
     }
 
+    public static boolean isLoaded() {
+        return FabricLoader.getInstance().isModLoaded(MOD_ID);
+    }
+
     public static boolean isIllagerLike(Mob mob) {
         return mob instanceof AbstractIllager || isIllagerInvasionMob(mob);
     }

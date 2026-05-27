@@ -57,6 +57,46 @@ public final class TacticalEffects {
         signal(level, pos);
     }
 
+    /** Cue for revenge / war / crusade / bounty arrivals — see {@link ArrivalCue}. */
+    public static void arrivalCue(ServerLevel level, Vec3 pos, ArrivalCue cue) {
+        switch (cue) {
+            case REVENGE -> {
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 1.0f, 0.85f);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
+                        pos.x, pos.y + 1.5, pos.z, 60, 2.5, 1.5, 2.5, 0.04);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER,
+                        pos.x, pos.y + 1.8, pos.z, 20, 1.2, 0.8, 1.2, 0.0);
+            }
+            case BOUNTY -> {
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GOAT_HORN_SOUND_VARIANTS.getFirst().value(), SoundSource.HOSTILE, 1.0f, 0.7f);
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.RAVAGER_AMBIENT, SoundSource.HOSTILE, 0.8f, 0.55f);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE,
+                        pos.x, pos.y + 1.3, pos.z, 80, 2.0, 1.5, 2.0, 0.03);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
+                        pos.x, pos.y + 1.0, pos.z, 25, 1.0, 0.6, 1.0, 0.02);
+            }
+            case WAR_PATROL -> {
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 1.0f, 1.0f);
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ILLUSIONER_PREPARE_BLINDNESS, SoundSource.HOSTILE, 0.6f, 1.0f);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
+                        pos.x, pos.y + 1.5, pos.z, 40, 2.0, 1.2, 2.0, 0.03);
+            }
+            case CRUSADE -> {
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 1.4f, 0.6f);
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 0.9f, 1.4f);
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 0.7f, 1.1f);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
+                        pos.x, pos.y + 2.0, pos.z, 120, 4.0, 2.0, 4.0, 0.05);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME,
+                        pos.x, pos.y + 1.5, pos.z, 40, 3.0, 1.5, 3.0, 0.04);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.SOUL,
+                        pos.x, pos.y + 1.5, pos.z, 30, 2.5, 1.5, 2.5, 0.06);
+            }
+        }
+    }
+
+    public enum ArrivalCue { REVENGE, BOUNTY, WAR_PATROL, CRUSADE }
+
     public static void search(ServerLevel level, Vec3 pos) {
     }
 
