@@ -78,7 +78,10 @@ public final class WarbandCommand {
                                                 .executes(WarbandCommand::debugSquad)))
                                 .then(Commands.literal("revenge")
                                         .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
-                                                .executes(WarbandCommand::debugRevenge))))));
+                                                .executes(WarbandCommand::debugRevenge)))
+                                .then(Commands.literal("bounty")
+                                        .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
+                                                .executes(WarbandCommand::debugBounty))))));
     }
 
     private static int reloadConfig(CommandContext<CommandSourceStack> ctx) {
@@ -264,6 +267,24 @@ public final class WarbandCommand {
 
         source.sendSuccess(() -> Component.literal(String.format(
                 "[Warband] Spawned debug revenge party at difficulty %.2f", difficulty)), false);
+        return 1;
+    }
+
+    /** Forces an illager bounty hunter against the executing player. */
+    private static int debugBounty(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.literal("[Warband] Bounty debug requires a player source."));
+            return 0;
+        }
+        double difficulty = DoubleArgumentType.getDouble(ctx, "difficulty");
+        if (!IllagerGrudgeSystem.debugSpawnBountyHunter(player, difficulty)) {
+            source.sendFailure(Component.literal("[Warband] Failed to find a bounty-hunter spawn position."));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(String.format(
+                "[Warband] Spawned debug bounty hunter at difficulty %.2f", difficulty)), false);
         return 1;
     }
 

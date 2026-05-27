@@ -1,0 +1,28 @@
+{
+  "parent": "warband:illager_war/root",
+  "display": {
+    "icon": { "id": "minecraft:dark_oak_door" },
+    "title": { "translate": "advancements.warband.illager_war.mansion_entered.title", "fallback": "Into the Mansion" },
+    "description": { "translate": "advancements.warband.illager_war.mansion_entered.description", "fallback": "Step into a Woodland Mansion." },
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "entered": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "structures": ["minecraft:mansion"]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -207,7 +207,10 @@ public final class SpawnDirector {
 
     private static Mob maybeSwapToIllusioner(Mob mob) {
         if (IllagerInvasionCompat.isLoaded()) return mob;
-        if (!(mob instanceof net.minecraft.world.entity.monster.illager.Evoker)) return mob;
+        // Already an Illusioner (e.g. set up by another route) — leave it.
+        if (mob instanceof net.minecraft.world.entity.monster.illager.Illusioner) return mob;
+        // Only swap vanilla illagers; if a mod's mob is here we'd lose its type.
+        if (!(mob instanceof net.minecraft.world.entity.monster.illager.AbstractIllager)) return mob;
         if (!(mob.level() instanceof ServerLevel level)) return mob;
         net.minecraft.world.entity.monster.illager.Illusioner illusioner =
                 EntityType.ILLUSIONER.create(level, EntitySpawnReason.EVENT);

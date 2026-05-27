@@ -24,6 +24,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.PatrollingMonster;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 
@@ -299,6 +300,13 @@ public final class IllagerGrudgeSystem {
         player.setAttached(WarbandAttachments.ILLAGER_GRUDGES, trim(grudges));
     }
 
+    public static boolean debugSpawnBountyHunter(ServerPlayer player, double difficulty) {
+        IllagerFaction faction = IllagerFaction.pick(player.getUUID().hashCode() ^ player.getBlockX() ^ player.getBlockZ());
+        FactionReputation reputation = new FactionReputation(faction,
+                Math.max(BOUNTY_HEAT_THRESHOLD, (int) Math.round(difficulty * 200)), 0L, 0L, 0L);
+        return spawnBountyHunter(player, reputation);
+    }
+
     public static boolean debugSpawnRevengeParty(ServerPlayer player, double difficulty) {
         IllagerFaction faction = IllagerFaction.pick(player.getUUID().hashCode() + player.getBlockX() * 31 + player.getBlockZ());
         IllagerGrudge grudge = new IllagerGrudge("Debug Captain", faction, (float) difficulty, 60, 0, 0,
@@ -360,10 +368,9 @@ public final class IllagerGrudgeSystem {
         for (int i = 0; i < spawned.size() && i < grudges.size(); i++) {
             Mob returned = spawned.get(i);
             returned.setCustomName(Component.literal(returnedName(grudges.get(i).survivorName())));
-            returned.setCustomNameVisible(true);
         }
         for (Mob mob : spawned) {
-            mob.setTarget(player);
+            directVengeancePursuit(mob, player);
         }
 
         maybeSpawnRivalInterception(player, grudges.getFirst(), origin, difficulty, spawned);
@@ -451,11 +458,11 @@ public final class IllagerGrudgeSystem {
             if (mob == null) continue;
             IllagerFactionSystem.setFaction(mob, reputation.faction());
             markGrudgeSpawned(mob);
-            mob.setTarget(player);
             spawned.add(mob);
         }
         if (spawned.isEmpty()) return false;
         SquadCoordinator.createSquad(level, spawned, difficulty);
+        for (Mob mob : spawned) directVengeancePursuit(mob, player);
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.WAR_PATROL);
         player.sendSystemMessage(Component.literal(
                 "A war patrol of the " + reputation.faction().displayName() + " moves to find you."), true);
@@ -487,14 +494,13 @@ public final class IllagerGrudgeSystem {
             if (mob == null) continue;
             IllagerFactionSystem.setFaction(mob, reputation.faction());
             markGrudgeSpawned(mob);
-            mob.setTarget(player);
             spawned.add(mob);
         }
         if (spawned.isEmpty()) return false;
         SquadCoordinator.createSquad(level, spawned, difficulty);
         Mob leader = spawned.getFirst();
         leader.setCustomName(Component.literal("Crusade Captain of the " + reputation.faction().displayName()));
-        leader.setCustomNameVisible(true);
+        for (Mob mob : spawned) directVengeancePursuit(mob, player);
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.CRUSADE);
         player.sendSystemMessage(Component.literal(
                 "A crusade of the " + reputation.faction().displayName() + " has come for you."), true);
@@ -514,14 +520,10 @@ public final class IllagerGrudgeSystem {
         markGrudgeSpawned(hunter);
         SquadCoordinator.createSquad(level, List.of(hunter), difficulty);
         hunter.setCustomName(Component.literal("Bounty Hunter of the " + reputation.faction().displayName()));
-        hunter.setCustomNameVisible(true);
-        hunter.setTarget(player);
-        // A relentless hunter, not a damage sponge: Speed to stay on the player
-        // and Strength to bite, no Resistance. Its difficulty comes from the
-        // squad AI and the chase, not from soaking hits. Lasts one encounter.
-        int buffTicks = 20 * 60 * 2;
-        hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SPEED, buffTicks, 1, false, true));
-        hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH, buffTicks, 0, false, true));
+        directVengeancePursuit(hunter, player);
+        // Strength on top of the helper's Speed I — bounty hunter bites harder than a patrol member.
+        hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.STRENGTH, 20 * 60 * 2, 0, false, true));
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.BOUNTY);
         player.sendSystemMessage(Component.literal("A bounty hunter from the " + reputation.faction().displayName() + " has your trail."), true);
         WarbandCriteria.fire(player, WarbandCriteria.BOUNTY_SUMMONED);
@@ -558,7 +560,6 @@ public final class IllagerGrudgeSystem {
         SquadCoordinator.createSquad(level, spawned, rivalDifficulty);
         Mob leader = spawned.getFirst();
         leader.setCustomName(Component.literal("Rival Scout of the " + rival.displayName()));
-        leader.setCustomNameVisible(true);
         player.sendSystemMessage(Component.literal(
                 "Rivals from the " + rival.displayName() + " move to intercept the "
                         + grudge.faction().displayName() + "."), true);
@@ -610,6 +611,18 @@ public final class IllagerGrudgeSystem {
     private static boolean isNotable(Mob mob) {
         MobData data = MobData.get(mob);
         return data.role() == Role.LEADER || data.difficulty() >= 0.65f;
+    }
+
+    /** Make a vengeance-spawned mob actively pursue the player — patrol target + nav kick + Speed buff. */
+    private static void directVengeancePursuit(Mob mob, ServerPlayer player) {
+        mob.setTarget(player);
+        if (mob instanceof PatrollingMonster patroller) {
+            patroller.setPatrolTarget(player.blockPosition());
+        }
+        mob.getNavigation().moveTo(player, 1.1);
+        // 5 minutes of Speed I so they cover distance to the player rather than dawdling.
+        mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.SPEED, 20 * 60 * 5, 0, false, true));
     }
 
     /** Banner-bearing illagers represent the faction directly; their kills always register. */
