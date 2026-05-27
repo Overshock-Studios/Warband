@@ -26,6 +26,7 @@ Warband is server-side and can be added to an existing world.
 - **[Illager Invasion](https://modrinth.com/mod/illager-invasion)**: soft, automatic support; its illagers join the faction system.
 - **Structure mods**: mansions and outposts are detected by structure tag, so compatible pillager strongholds can opt in.
 - **[Ascendant Armory](https://modrinth.com/mod/ascendant-armory)**: supported from the Ascendant Armory side. Warband-stamped mobs can influence core drops when both mods are installed.
+- **[True Ending](https://modrinth.com/mod/true-ending)**: auto-detected. When loaded, Warband's Ender Dragon phase abilities are suppressed so True Ending's dragon overhaul runs unobstructed; Wither abilities are unaffected.
 
 ## License
 

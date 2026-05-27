@@ -30,7 +30,7 @@ public final class WarbandConfig {
     /** If true, Peaceful disables Warband and Easy/Normal lower its ceiling. */
     public static boolean respectGlobalDifficulty = true;
     /** If true, vanilla regional difficulty contributes as a weighted floor. */
-    public static boolean factorVanillaDifficulty = true;
+    public static boolean factorVanillaDifficulty = false;
     /** Strength of vanilla regional difficulty when enabled. */
     public static double vanillaRegionalDifficultyWeight = 0.35;
     /** Optional mercy window after death. 0 disables relief and keeps regional pressure honest. */
@@ -41,12 +41,12 @@ public final class WarbandConfig {
     public static double scoreDecayRate = 0.005;
     /** REGIONAL mode: chunks around players sampled each interval. */
     public static int regionalSampleRadiusChunks = 2;
-    public static double regionalBlendRate = 0.08;
-    public static double regionalAccelerationPerSample = 0.01;
+    public static double regionalBlendRate = 0.20;
+    public static double regionalAccelerationPerSample = 0.03;
     public static double regionalAccelerationMax = 0.25;
     public static double regionalDecayRate = 0.002;
     /** REGIONAL mode: pressure must persist this long before a cell rises. */
-    public static int regionalIncreaseDelaySeconds = 10;
+    public static int regionalIncreaseDelaySeconds = 0;
     /** REGIONAL mode: cell decay waits this long after last pressure. */
     public static int regionalDecayDelaySeconds = 120;
     /** REGIONAL mode: extra difficulty added per additional nearby player. */
@@ -94,7 +94,8 @@ public final class WarbandConfig {
     public static boolean experienceScalingEnabled = true;
     public static double experienceDifficultyBonusMax = 0.35;
     public static double experienceLeaderBonus = 0.15;
-    public static boolean bossAbilitiesEnabled = true;
+    public static boolean witherAbilitiesEnabled = true;
+    public static boolean enderDragonAbilitiesEnabled = true;
     public static boolean extendedMobTacticsEnabled = true;
     /** Comma-separated tactic names to suppress while keeping other smart AI active. */
     public static String disabledTactics = "";
@@ -204,7 +205,9 @@ public final class WarbandConfig {
         experienceScalingEnabled = parseBoolean(props, "experienceScalingEnabled", experienceScalingEnabled, logger);
         experienceDifficultyBonusMax = parseDouble(props, "experienceDifficultyBonusMax", experienceDifficultyBonusMax, 0.0, 5.0, logger);
         experienceLeaderBonus = parseDouble(props, "experienceLeaderBonus", experienceLeaderBonus, 0.0, 5.0, logger);
-        bossAbilitiesEnabled = parseBoolean(props, "bossAbilitiesEnabled", bossAbilitiesEnabled, logger);
+        boolean legacyBossAbilities = parseBoolean(props, "bossAbilitiesEnabled", true, logger);
+        witherAbilitiesEnabled = parseBoolean(props, "witherAbilitiesEnabled", legacyBossAbilities, logger);
+        enderDragonAbilitiesEnabled = parseBoolean(props, "enderDragonAbilitiesEnabled", legacyBossAbilities, logger);
         extendedMobTacticsEnabled = parseBoolean(props, "extendedMobTacticsEnabled", extendedMobTacticsEnabled, logger);
         disabledTactics = props.getProperty("disabledTactics", disabledTactics).trim();
         disabledTacticSet = parseTacticSet(disabledTactics, logger);
@@ -339,8 +342,11 @@ public final class WarbandConfig {
                 experienceScalingEnabled=%s
                 experienceDifficultyBonusMax=%s
                 experienceLeaderBonus=%s
-                # If true, major bosses gain Warband phase abilities.
-                bossAbilitiesEnabled=%s
+                # If true, the Wither gains Warband phase abilities (nova, dash, skull barrage, last stand).
+                witherAbilitiesEnabled=%s
+                # If true, the Ender Dragon gains Warband phase abilities (blink, charge, ender gale, breath line).
+                # Disable this for compatibility with mods that replace the dragon fight, such as True Ending.
+                enderDragonAbilitiesEnabled=%s
                 # If true, guardians, shulkers, ghasts, cave spiders, ravagers and wardens get Warband tactics.
                 extendedMobTacticsEnabled=%s
                 # Comma-separated tactic names to disable, e.g. SPIDER_WEB,ENDERMAN_DISRUPT.
@@ -447,7 +453,8 @@ public final class WarbandConfig {
                     experienceScalingEnabled,
                     experienceDifficultyBonusMax,
                     experienceLeaderBonus,
-                    bossAbilitiesEnabled,
+                    witherAbilitiesEnabled,
+                    enderDragonAbilitiesEnabled,
                     extendedMobTacticsEnabled,
                     disabledTactics,
                     debugTacticLogs,

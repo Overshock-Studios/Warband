@@ -2,8 +2,11 @@ package com.warband.spawn;
 
 import com.warband.config.WarbandConfig;
 import com.warband.entity.WarbandAttachments;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -56,13 +59,30 @@ public final class BossDirector {
     private static boolean spawningWitherMinion;
     private static final int WITHER_SPAWN_GRACE_TICKS = 20 * 18;
 
+    private static final boolean TRUE_ENDING_MOD_PRESENT = FabricLoader.getInstance().isModLoaded("mr_true_ending");
+    private static boolean trueEndingDatapackPresent;
+
     private BossDirector() {
     }
 
+    public static boolean dragonAbilitiesActive() {
+        return WarbandConfig.enderDragonAbilitiesEnabled
+                && !TRUE_ENDING_MOD_PRESENT
+                && !trueEndingDatapackPresent;
+    }
+
+    private static void refreshDatapackDetection(MinecraftServer server) {
+        trueEndingDatapackPresent = server.getResourceManager().listPacks()
+                .anyMatch(pack -> pack.getNamespaces(net.minecraft.server.packs.PackType.SERVER_DATA).contains("true_ending"));
+    }
+
     public static void register() {
+        ServerLifecycleEvents.SERVER_STARTED.register(BossDirector::refreshDatapackDetection);
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> refreshDatapackDetection(server));
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (!WarbandConfig.bossAbilitiesEnabled) return;
-            if (!PENDING_BLINKS.isEmpty()) {
+            boolean dragonActive = dragonAbilitiesActive();
+            if (!WarbandConfig.witherAbilitiesEnabled && !dragonActive) return;
+            if (dragonActive && !PENDING_BLINKS.isEmpty()) {
                 for (ServerLevel level : server.getAllLevels()) {
                     for (Map.Entry<UUID, PendingBlink> entry : PENDING_BLINKS.entrySet()) {
                         PendingBlink pending = entry.getValue();
@@ -81,13 +101,17 @@ public final class BossDirector {
                 if (intensity <= 0.0) continue;
                 AABB active = activePlayerBounds(level);
                 if (active == null) continue;
-                for (WitherBoss wither : level.getEntitiesOfClass(WitherBoss.class, active, WitherBoss::isAlive)) {
-                    tickWither(level, wither, intensity);
+                if (WarbandConfig.witherAbilitiesEnabled) {
+                    for (WitherBoss wither : level.getEntitiesOfClass(WitherBoss.class, active, WitherBoss::isAlive)) {
+                        tickWither(level, wither, intensity);
+                    }
                 }
-                for (EnderDragon dragon : level.getEntitiesOfClass(EnderDragon.class, active, EnderDragon::isAlive)) {
-                    tickDragon(level, dragon, intensity);
+                if (dragonActive) {
+                    for (EnderDragon dragon : level.getEntitiesOfClass(EnderDragon.class, active, EnderDragon::isAlive)) {
+                        tickDragon(level, dragon, intensity);
+                    }
+                    resolvePendingBlinks(level);
                 }
-                resolvePendingBlinks(level);
             }
             cleanupRuntimeState(server.getAllLevels());
         });

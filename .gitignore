@@ -37,3 +37,7 @@ Thumbs.db
 
 # Temporary files
 tmp/
+
+# Wiki clone (cloned to c:/tmp/Warband.wiki, ignored here if pulled into the tree)
+wiki/
+Warband.wiki/

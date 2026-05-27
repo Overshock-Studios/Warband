@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.warband.ai.Squad;
 import com.warband.ai.SquadCoordinator;
 import com.warband.ai.MultiplayerDirector;
+import com.warband.WarbandMod;
 import com.warband.config.WarbandConfig;
 import com.warband.difficulty.DifficultyManager;
 import com.warband.difficulty.RegionalDifficulty;
@@ -64,6 +65,9 @@ public final class WarbandCommand {
                                 .executes(WarbandCommand::reportRegion))
                         .then(Commands.literal("intel")
                                 .executes(WarbandCommand::reportIntel))
+                        .then(Commands.literal("reload")
+                                .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                                .executes(WarbandCommand::reloadConfig))
                         .then(Commands.literal("debug")
                                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                                 .then(Commands.literal("spawn")
@@ -75,6 +79,12 @@ public final class WarbandCommand {
                                 .then(Commands.literal("revenge")
                                         .then(Commands.argument("difficulty", DoubleArgumentType.doubleArg(0.0, 1.0))
                                                 .executes(WarbandCommand::debugRevenge))))));
+    }
+
+    private static int reloadConfig(CommandContext<CommandSourceStack> ctx) {
+        WarbandConfig.load(WarbandMod.LOGGER);
+        ctx.getSource().sendSuccess(() -> Component.literal("[Warband] config reloaded from config/warband.properties"), true);
+        return 1;
     }
 
     private static int reportRegion(CommandContext<CommandSourceStack> ctx) {
