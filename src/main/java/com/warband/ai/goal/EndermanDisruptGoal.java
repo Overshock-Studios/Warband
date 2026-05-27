@@ -46,11 +46,11 @@ public final class EndermanDisruptGoal extends SquadGoal {
             placed = TemporaryTacticBlocks.place(level, disruptionPos, carriedOrFallback(), 20 * 8);
         }
 
+        boolean teleported = false;
         if (mob.distanceToSqr(disruptTarget) > 8.0 * 8.0) {
-            Vec3 behind = disruptTarget.position().subtract(disruptTarget.getLookAngle().scale(3.0));
-            mob.randomTeleport(behind.x, behind.y, behind.z, true);
+            teleported = teleportNear(disruptTarget);
         }
-        if (placed) {
+        if (placed || teleported) {
             logTactic(Tactic.ENDERMAN_DISRUPT);
             TacticalEffects.signal(level, mob);
         }
@@ -70,5 +70,21 @@ public final class EndermanDisruptGoal extends SquadGoal {
             return enderMan.getCarriedBlock();
         }
         return Blocks.DIRT.defaultBlockState();
+    }
+
+    private boolean teleportNear(LivingEntity target) {
+        Vec3 look = target.getLookAngle();
+        Vec3[] attempts = {
+                target.position().subtract(look.scale(3.0)),
+                target.position().add(look.yRot(1.5707964F).scale(2.5)),
+                target.position().add(look.yRot(-1.5707964F).scale(2.5)),
+                target.position().subtract(look.scale(4.5))
+        };
+        for (Vec3 attempt : attempts) {
+            if (mob.randomTeleport(attempt.x, attempt.y, attempt.z, true)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

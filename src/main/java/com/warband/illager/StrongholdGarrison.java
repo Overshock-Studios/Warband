@@ -37,6 +37,7 @@ public final class StrongholdGarrison {
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (!WarbandConfig.illagerStrongholdsEnabled) return;
             if (!(entity instanceof Mob mob) || MobData.isStamped(mob)) return;
+            if (mob.isRemoved() || mob.isDeadOrDying() || !mob.isAlive()) return;
             if (!IllagerInvasionCompat.isIllagerLike(mob)) return;
 
             BlockPos pos = mob.blockPosition();

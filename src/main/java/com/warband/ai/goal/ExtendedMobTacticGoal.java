@@ -11,9 +11,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.monster.Ravager;
+import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.monster.warden.Warden;
+import net.minecraft.world.entity.monster.skeleton.Stray;
 import net.minecraft.world.entity.monster.spider.CaveSpider;
 import net.minecraft.world.phys.Vec3;
 
@@ -66,6 +70,37 @@ public final class ExtendedMobTacticGoal extends SquadGoal {
             return;
         }
 
+        if (isBogged() && mob.distanceToSqr(target) < 8.0 * 8.0) {
+            Vec3 away = mob.position().subtract(target.position());
+            if (away.lengthSqr() > 0.001) {
+                mob.setDeltaMovement(mob.getDeltaMovement().add(away.normalize().scale(0.75)).add(0.0, 0.18, 0.0));
+            }
+            AreaEffectCloud cloud = new AreaEffectCloud(level, mob.getX(), mob.getY(), mob.getZ());
+            cloud.setOwner(mob);
+            cloud.setRadius(2.25F);
+            cloud.setDuration(80);
+            cloud.setWaitTime(0);
+            cloud.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0, false, true));
+            level.addFreshEntity(cloud);
+            logTactic(Tactic.BOGGED_BACKDASH);
+            level.playSound(null, mob.getX(), mob.getY(), mob.getZ(), SoundEvents.BOGGED_AMBIENT, SoundSource.HOSTILE, 0.8f, 1.2f);
+            return;
+        }
+
+        if (mob instanceof Stray && mob.distanceToSqr(target) > 5.0 * 5.0) {
+            Vec3 toTarget = target.position().subtract(mob.position());
+            Vec3 direction = new Vec3(toTarget.x, 0.0, toTarget.z);
+            if (direction.lengthSqr() > 0.001) {
+                mob.setDeltaMovement(mob.getDeltaMovement().add(direction.normalize().scale(0.35)).add(0.0, 0.55, 0.0));
+            }
+            if (mob instanceof RangedAttackMob ranged) {
+                ranged.performRangedAttack(target, 1.0F);
+            }
+            logTactic(Tactic.STRAY_JUMP_SHOT);
+            level.playSound(null, mob.getX(), mob.getY(), mob.getZ(), SoundEvents.SNOWBALL_THROW, SoundSource.HOSTILE, 0.8f, 0.8f);
+            return;
+        }
+
         if (mob instanceof Ravager) {
             Vec3 charge = target.position().subtract(mob.position()).normalize().scale(0.85).add(0.0, 0.12, 0.0);
             mob.setDeltaMovement(mob.getDeltaMovement().add(charge));
@@ -80,5 +115,9 @@ public final class ExtendedMobTacticGoal extends SquadGoal {
             logTactic(Tactic.WARDEN_PRESSURE);
             level.playSound(null, mob.getX(), mob.getY(), mob.getZ(), SoundEvents.WARDEN_ANGRY, SoundSource.HOSTILE, 1.0f, 0.75f);
         }
+    }
+
+    private boolean isBogged() {
+        return "bogged".equals(BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).getPath());
     }
 }

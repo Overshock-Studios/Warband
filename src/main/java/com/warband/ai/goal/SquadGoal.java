@@ -1,6 +1,7 @@
 package com.warband.ai.goal;
 
 import com.warband.ai.Squad;
+import com.warband.ai.VisibilityRules;
 import com.warband.WarbandMod;
 import com.warband.config.WarbandConfig;
 import com.warband.entity.Tactic;
@@ -29,7 +30,7 @@ abstract class SquadGoal extends Goal implements WarbandGoal {
 
     @Override
     public boolean canContinueToUse() {
-        return !mob.getNavigation().isDone();
+        return mob.isAlive() && !mob.isDeadOrDying() && !mob.isRemoved() && !mob.getNavigation().isDone();
     }
 
     protected boolean decisionReady(int interval) {
@@ -48,10 +49,11 @@ abstract class SquadGoal extends Goal implements WarbandGoal {
 
     protected @Nullable LivingEntity visibleTarget() {
         LivingEntity target = mob.getTarget();
-        if (target != null && target.isAlive() && mob.hasLineOfSight(target)) {
+        if (VisibilityRules.canUseTacticalSight(mob, target)) {
             return target;
         }
-        return squad.target();
+        target = squad.target();
+        return VisibilityRules.canUseTacticalSight(mob, target) ? target : null;
     }
 
     protected boolean moveTo(BlockPos pos) {

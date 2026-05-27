@@ -3,6 +3,7 @@ package com.warband.ai;
 import com.warband.ai.goal.BreakLosGoal;
 import com.warband.ai.goal.BlazeHoverGoal;
 import com.warband.ai.goal.CallBackupGoal;
+import com.warband.ai.goal.CeilingCrawlGoal;
 import com.warband.ai.goal.CreeperStalkGoal;
 import com.warband.ai.goal.EndermanDisruptGoal;
 import com.warband.ai.goal.ExtendedMobTacticGoal;
@@ -19,6 +20,7 @@ import com.warband.ai.goal.SeekShelterGoal;
 import com.warband.ai.goal.PiglinSocialGoal;
 import com.warband.ai.goal.PressureUnreachableGoal;
 import com.warband.ai.goal.RegroupGoal;
+import com.warband.ai.goal.RangedRepositionGoal;
 import com.warband.ai.goal.RetreatWhenLowGoal;
 import com.warband.ai.goal.SkeletonSmokeGoal;
 import com.warband.ai.goal.SlimeSurgeGoal;
@@ -126,6 +128,7 @@ public final class SquadCoordinator {
         // thread spawns, so the marker is already set and we skip.
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (!(entity instanceof Mob mob)) return;
+            if (isDyingOrGone(mob)) return;
 
             if (!MobData.isStamped(mob)) {
                 // Off-thread worldgen spawn caught up on main-thread load.
@@ -167,21 +170,23 @@ public final class SquadCoordinator {
     }
 
     public static boolean assignNaturalSpawn(Mob mob, double difficulty, boolean spawnFormation) {
+        if (isDyingOrGone(mob)) return false;
         if (!WarbandConfig.squadsEnabled || difficulty < SMART_MIN_DIFFICULTY || !underSmartCap((ServerLevel) mob.level(), mob)) {
             return false;
         }
         if (!isSmartEligible(mob)) {
             return false;
         }
-        if (mob.getRandom().nextFloat() > squadChance(difficulty)) {
-            return false;
-        }
 
         ServerLevel level = (ServerLevel) mob.level();
         if (!formsNaturalSquads(mob)) {
             if (Tactic.chooseFor(mob, difficulty, Role.NONE) == 0) return false;
+            if (!alwaysSoloTactic(mob) && mob.getRandom().nextFloat() > squadChance(difficulty)) return false;
             addSoloTactics(level, mob, difficulty);
             return true;
+        }
+        if (mob.getRandom().nextFloat() > squadChance(difficulty)) {
+            return false;
         }
 
         Squad squad = shouldJoinExisting(mob, difficulty)
@@ -235,7 +240,7 @@ public final class SquadCoordinator {
 
         for (int i = 0; i < mobs.size(); i++) {
             Mob mob = mobs.get(i);
-            if (mob == null || !mob.isAlive()) continue;
+            if (mob == null || isDyingOrGone(mob)) continue;
             Role role = i == 0 && difficulty >= 0.45 ? Role.LEADER : chooseRole(mob, i, difficulty);
             addMob(squad, mob, role, difficulty);
         }
@@ -249,6 +254,7 @@ public final class SquadCoordinator {
      * <i>smartest</i> illager in its garrison, not merely the strongest.
      */
     public static void makeCommander(Mob mob, double difficulty) {
+        if (isDyingOrGone(mob)) return;
         if (!WarbandConfig.squadsEnabled || !(mob.level() instanceof ServerLevel level)) return;
 
         Squad squad = SQUADS.get(MobData.get(mob).squadId());
@@ -295,6 +301,7 @@ public final class SquadCoordinator {
 
     /** Attach goals for a stamped solo mob so fresh spawns match loaded mobs. */
     public static void bindStampedSolo(Mob mob, ServerLevel level) {
+        if (isDyingOrGone(mob)) return;
         if (!MobData.isStamped(mob)) return;
         addGoals(mob, new Squad(MobData.NO_SQUAD, level), Role.NONE);
     }
@@ -338,17 +345,20 @@ public final class SquadCoordinator {
     }
 
     private static void addMob(Squad squad, Mob mob, Role role, double difficulty) {
+        if (isDyingOrGone(mob)) return;
         SpawnDirector.stamp(mob, difficulty, role, squad.id());
         addGoals(mob, squad, role);
         squad.add(mob);
     }
 
     private static void addSoloTactics(ServerLevel level, Mob mob, double difficulty) {
+        if (isDyingOrGone(mob)) return;
         SpawnDirector.stamp(mob, difficulty);
         addGoals(mob, new Squad(MobData.NO_SQUAD, level), Role.NONE);
     }
 
     private static void addGoals(Mob mob, Squad squad, Role role) {
+        if (isDyingOrGone(mob)) return;
         MobGoalSelectorAccessor accessor = (MobGoalSelectorAccessor) mob;
         accessor.warband$goalSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
         accessor.warband$targetSelector().removeAllGoals(goal -> goal instanceof WarbandGoal);
@@ -387,6 +397,9 @@ public final class SquadCoordinator {
         if (hasEnabledTactic(data, Tactic.STICKY_PATH)) {
             accessor.warband$goalSelector().addGoal(7, new StickyPathGoal(mob, squad));
         }
+        if (hasEnabledTactic(data, Tactic.CEILING_CRAWL)) {
+            accessor.warband$goalSelector().addGoal(4, new CeilingCrawlGoal(mob, squad));
+        }
         if (hasEnabledTactic(data, Tactic.FROST_WALKER)) {
             accessor.warband$goalSelector().addGoal(7, new FrostWalkerGoal(mob));
         }
@@ -397,6 +410,9 @@ public final class SquadCoordinator {
                 || hasEnabledTactic(data, Tactic.LEAP_UNREACHABLE)
                 || hasEnabledTactic(data, Tactic.MOB_STACK_CLIMB)) {
             accessor.warband$goalSelector().addGoal(5, new PressureUnreachableGoal(mob, squad));
+        }
+        if (hasEnabledTactic(data, Tactic.RANGED_REPOSITION)) {
+            accessor.warband$goalSelector().addGoal(4, new RangedRepositionGoal(mob, squad));
         }
         if (hasEnabledTactic(data, Tactic.SKELETON_SMOKE) && mob instanceof AbstractSkeleton) {
             accessor.warband$goalSelector().addGoal(2, new SkeletonSmokeGoal(mob, squad));
@@ -439,6 +455,8 @@ public final class SquadCoordinator {
                 || hasEnabledTactic(data, Tactic.GHAST_REPOSITION)
                 || hasEnabledTactic(data, Tactic.CAVE_SPIDER_AMBUSH)
                 || hasEnabledTactic(data, Tactic.RAVAGER_BREAKER)
+                || hasEnabledTactic(data, Tactic.BOGGED_BACKDASH)
+                || hasEnabledTactic(data, Tactic.STRAY_JUMP_SHOT)
                 || hasEnabledTactic(data, Tactic.WARDEN_PRESSURE))) {
             accessor.warband$goalSelector().addGoal(3, new ExtendedMobTacticGoal(mob, squad));
         }
@@ -577,6 +595,10 @@ public final class SquadCoordinator {
                 || IllagerInvasionCompat.isIllagerLike(mob);
     }
 
+    private static boolean alwaysSoloTactic(Mob mob) {
+        return mob instanceof EnderMan;
+    }
+
     private static boolean shouldJoinExisting(Mob mob, double difficulty) {
         if (!canCallBackup(mob) || difficulty < 0.35) return false;
         return mob.getRandom().nextFloat() < 0.45f;
@@ -646,5 +668,9 @@ public final class SquadCoordinator {
     private static boolean hasWarbandAi(Mob mob) {
         MobData data = MobData.get(mob);
         return data.inSquad() || data.tactics() != 0;
+    }
+
+    private static boolean isDyingOrGone(Mob mob) {
+        return mob.isRemoved() || mob.isDeadOrDying() || !mob.isAlive();
     }
 }

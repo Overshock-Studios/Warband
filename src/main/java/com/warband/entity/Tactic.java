@@ -10,6 +10,7 @@ import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.Phantom;
 import net.minecraft.world.entity.monster.Ravager;
+import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Witch;
@@ -24,6 +25,7 @@ import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.monster.zombie.Drowned;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.EnumSet;
 
@@ -53,7 +55,11 @@ public enum Tactic {
     GHAST_REPOSITION(1 << 20),
     CAVE_SPIDER_AMBUSH(1 << 21),
     RAVAGER_BREAKER(1 << 22),
-    WARDEN_PRESSURE(1 << 23);
+    WARDEN_PRESSURE(1 << 23),
+    CEILING_CRAWL(1 << 24),
+    RANGED_REPOSITION(1 << 25),
+    BOGGED_BACKDASH(1 << 26),
+    STRAY_JUMP_SHOT(1 << 27);
 
     private final int bit;
 
@@ -78,6 +84,8 @@ public enum Tactic {
         if (subjects.contains(Subject.SPIDER)) {
             if (difficulty >= 0.45) mask |= SPIDER_WEB.bit;
             if (difficulty >= 0.65 || role == Role.SKIRMISHER) mask |= STICKY_PATH.bit;
+            if (difficulty >= 0.55) mask |= CEILING_CRAWL.bit;
+            if (difficulty >= 0.70) mask |= LEAP_UNREACHABLE.bit;
         }
         if (subjects.contains(Subject.CAVE_SPIDER) && difficulty >= 0.45) {
             mask |= CAVE_SPIDER_AMBUSH.bit | PRESSURE_UNREACHABLE.bit;
@@ -87,7 +95,7 @@ public enum Tactic {
             if (difficulty >= 0.60) mask |= SKELETON_SMOKE.bit;
         }
         if (subjects.contains(Subject.STRAY) && difficulty >= 0.55) {
-            mask |= FROST_WALKER.bit;
+            mask |= FROST_WALKER.bit | STRAY_JUMP_SHOT.bit;
         }
         if (subjects.contains(Subject.ZOMBIE_FAMILY)) {
             if (difficulty >= 0.40) mask |= ZOMBIE_HORDE.bit;
@@ -142,6 +150,12 @@ public enum Tactic {
         if (subjects.contains(Subject.RAVAGER) && difficulty >= 0.50) {
             mask |= RAVAGER_BREAKER.bit | PRESSURE_UNREACHABLE.bit;
         }
+        if (subjects.contains(Subject.BOGGED) && difficulty >= 0.50) {
+            mask |= BOGGED_BACKDASH.bit;
+        }
+        if (subjects.contains(Subject.RANGED_ATTACK) && difficulty >= 0.45) {
+            mask |= RANGED_REPOSITION.bit;
+        }
         if (subjects.contains(Subject.WARDEN) && difficulty >= 0.35) {
             mask |= WARDEN_PRESSURE.bit | PRESSURE_UNREACHABLE.bit;
         }
@@ -154,6 +168,8 @@ public enum Tactic {
         if (mob instanceof CaveSpider) subjects.add(Subject.CAVE_SPIDER);
         if (mob instanceof AbstractSkeleton) subjects.add(Subject.ABSTRACT_SKELETON);
         if (mob instanceof Stray) subjects.add(Subject.STRAY);
+        if ("bogged".equals(BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).getPath())) subjects.add(Subject.BOGGED);
+        if (mob instanceof RangedAttackMob) subjects.add(Subject.RANGED_ATTACK);
         if (mob instanceof Zombie || mob instanceof Drowned || mob instanceof ZombifiedPiglin) subjects.add(Subject.ZOMBIE_FAMILY);
         if (mob instanceof Creeper) subjects.add(Subject.CREEPER);
         if (mob instanceof EnderMan) subjects.add(Subject.ENDERMAN);
@@ -177,6 +193,8 @@ public enum Tactic {
         CAVE_SPIDER,
         ABSTRACT_SKELETON,
         STRAY,
+        BOGGED,
+        RANGED_ATTACK,
         ZOMBIE_FAMILY,
         CREEPER,
         ENDERMAN,

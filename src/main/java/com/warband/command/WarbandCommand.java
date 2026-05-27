@@ -205,6 +205,19 @@ public final class WarbandCommand {
                 "  mode=%s  vanilla=%s",
                 WarbandConfig.difficultyMode,
                 level.getLevelData().getDifficulty().getSerializedName())), false);
+        if (WarbandConfig.difficultyMode == com.warband.difficulty.DifficultyMode.REGIONAL) {
+            double regionalRaw = RegionalDifficulty.difficultyAt(level, pos);
+            double spawnScale = DifficultyManager.regionalSpawnScale(level, pos);
+            source.sendSuccess(() -> Component.literal(String.format(
+                    "  regional=%.2f  spawnScale=%.2f", regionalRaw, spawnScale)), false);
+        }
+        double depth = DifficultyManager.overworldDepthBonus(level, pos);
+        boolean spawnSafe = DifficultyManager.insideOverworldSafeRadius(level, pos);
+        if (depth > 0.0 || WarbandConfig.overworldDepthDifficultyEnabled) {
+            source.sendSuccess(() -> Component.literal(String.format(
+                    "  depthBonus=%.2f  applied=%.2f%s",
+                    depth, spawnSafe ? 0.0 : depth, spawnSafe ? " (spawn-safe)" : "")), false);
+        }
         if (player != null) {
             Float score = player.getAttached(WarbandAttachments.PLAYER_SCORE);
             source.sendSuccess(() -> Component.literal(String.format(

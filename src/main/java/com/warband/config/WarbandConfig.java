@@ -24,7 +24,9 @@ public final class WarbandConfig {
     public static ConfigProfile configProfile = ConfigProfile.CUSTOM;
     public static DifficultyMode difficultyMode = DifficultyMode.REGIONAL;
     /** Blocks from world spawn that stay fully vanilla (difficulty 0). */
-    public static int safeRadius = 256;
+    public static int safeRadius = 96;
+    /** REGIONAL mode: blocks after safeRadius until learned pressure reaches full strength. */
+    public static int regionalSpawnRampBlocks = 32;
     /** Distance from spawn at which difficulty caps (DISTANCE mode). */
     public static int maxDifficultyRadius = 4096;
     /** If true, Peaceful disables Warband and Easy/Normal lower its ceiling. */
@@ -51,6 +53,14 @@ public final class WarbandConfig {
     public static int regionalDecayDelaySeconds = 120;
     /** REGIONAL mode: extra difficulty added per additional nearby player. */
     public static double regionalPlayerBonus = 0.15;
+    /** If true, Overworld caves add difficulty below the configured Y range. */
+    public static boolean overworldDepthDifficultyEnabled = true;
+    /** Y where Overworld depth difficulty starts adding pressure. */
+    public static int overworldDepthStartY = 48;
+    /** Y where Overworld depth difficulty reaches its maximum bonus. */
+    public static int overworldDepthMaxY = -48;
+    /** Maximum additive Overworld depth difficulty bonus. */
+    public static double overworldDepthBonusMax = 0.25;
     /** Extra difficulty added in the Nether, regardless of mode. */
     public static double netherDifficultyBonus = 0.25;
     /** Extra difficulty added in the End, regardless of mode. */
@@ -172,6 +182,11 @@ public final class WarbandConfig {
         regionalIncreaseDelaySeconds = parseInt(props, "regionalIncreaseDelaySeconds", regionalIncreaseDelaySeconds, 0, 3600, logger);
         regionalDecayDelaySeconds = parseInt(props, "regionalDecayDelaySeconds", regionalDecayDelaySeconds, 0, 100_000, logger);
         regionalPlayerBonus = parseDouble(props, "regionalPlayerBonus", regionalPlayerBonus, 0.0, 1.0, logger);
+        regionalSpawnRampBlocks = parseInt(props, "regionalSpawnRampBlocks", regionalSpawnRampBlocks, 1, 100_000, logger);
+        overworldDepthDifficultyEnabled = parseBoolean(props, "overworldDepthDifficultyEnabled", overworldDepthDifficultyEnabled, logger);
+        overworldDepthStartY = parseInt(props, "overworldDepthStartY", overworldDepthStartY, -2048, 2048, logger);
+        overworldDepthMaxY = parseInt(props, "overworldDepthMaxY", overworldDepthMaxY, -2048, 2048, logger);
+        overworldDepthBonusMax = parseDouble(props, "overworldDepthBonusMax", overworldDepthBonusMax, 0.0, 1.0, logger);
         netherDifficultyBonus = parseDouble(props, "netherDifficultyBonus", netherDifficultyBonus, 0.0, 1.0, logger);
         endDifficultyBonus = parseDouble(props, "endDifficultyBonus", endDifficultyBonus, 0.0, 1.0, logger);
 
@@ -258,12 +273,14 @@ public final class WarbandConfig {
                 # Changes take effect on world reload or server restart.
 
                 # ── Difficulty ────────────────────────────────────────────────────
-                # Preset override: CUSTOM, SOFT, BALANCED, BRUTAL. CUSTOM respects every value below.
+                # Preset override: CUSTOM, VANILLA_PLUS (or vanilla+), FANTASY. CUSTOM respects every value below.
                 configProfile=%s
                 # How local difficulty is derived: DISTANCE, SCORE, or REGIONAL.
                 difficultyMode=%s
                 # Blocks from world spawn that stay fully vanilla (difficulty 0).
                 safeRadius=%d
+                # REGIONAL mode: blocks after safeRadius until learned pressure reaches full strength.
+                regionalSpawnRampBlocks=%d
                 # Distance from spawn at which difficulty caps (DISTANCE mode).
                 maxDifficultyRadius=%d
                 # Peaceful disables Warband; Easy/Normal lower its difficulty ceiling.
@@ -289,6 +306,12 @@ public final class WarbandConfig {
                 regionalDecayDelaySeconds=%d
                 # REGIONAL mode: extra difficulty added per additional nearby player.
                 regionalPlayerBonus=%s
+                # Overworld depth difficulty: optional additive pressure below overworldDepthStartY,
+                # reaching overworldDepthBonusMax at overworldDepthMaxY.
+                overworldDepthDifficultyEnabled=%s
+                overworldDepthStartY=%d
+                overworldDepthMaxY=%d
+                overworldDepthBonusMax=%s
                 # Extra difficulty added in the Nether / End, regardless of mode.
                 netherDifficultyBonus=%s
                 endDifficultyBonus=%s
@@ -349,7 +372,7 @@ public final class WarbandConfig {
                 enderDragonAbilitiesEnabled=%s
                 # If true, guardians, shulkers, ghasts, cave spiders, ravagers and wardens get Warband tactics.
                 extendedMobTacticsEnabled=%s
-                # Comma-separated tactic names to disable, e.g. SPIDER_WEB,ENDERMAN_DISRUPT.
+                # Comma-separated tactic names to disable, e.g. SPIDER_WEB,CEILING_CRAWL,RANGED_REPOSITION,ENDERMAN_DISRUPT.
                 disabledTactics=%s
                 # If true, logs each Warband tactic execution for debugging.
                 debugTacticLogs=%s
@@ -406,6 +429,7 @@ public final class WarbandConfig {
                     configProfile,
                     difficultyMode,
                     safeRadius,
+                    regionalSpawnRampBlocks,
                     maxDifficultyRadius,
                     respectGlobalDifficulty,
                     factorVanillaDifficulty,
@@ -421,6 +445,10 @@ public final class WarbandConfig {
                     regionalIncreaseDelaySeconds,
                     regionalDecayDelaySeconds,
                     regionalPlayerBonus,
+                    overworldDepthDifficultyEnabled,
+                    overworldDepthStartY,
+                    overworldDepthMaxY,
+                    overworldDepthBonusMax,
                     netherDifficultyBonus,
                     endDifficultyBonus,
                     squadsEnabled,
@@ -527,20 +555,30 @@ public final class WarbandConfig {
         switch (configProfile) {
             case CUSTOM -> {
             }
-            case SOFT -> {
-                naturalSquadChanceMax = 0.35;
-                statHealthBonusMax = 0.20;
-                statDamageBonusMax = 0.12;
-                maxSmartMobsPerPlayer = 16;
+            case VANILLA_PLUS -> {
+                naturalSquadChanceMax = 0.45;
+                statHealthBonusMax = 0.25;
+                statDamageBonusMax = 0.15;
+                maxSmartMobsPerPlayer = 20;
+                temporaryTacticBlocks = false;
+                witherAbilitiesEnabled = false;
+                enderDragonAbilitiesEnabled = false;
                 multiplayerSmartMobsPerExtraPlayer = 6;
-                multiplayerEncounterBonusPerExtraPlayer = 0.06;
-                multiplayerDeathMercySeconds = 75;
-                multiplayerDogpilePenalty = 28.0;
-                antiFarmTier1Crowd = 12;
-                antiFarmTier2Crowd = 20;
-                antiFarmTier3Crowd = 32;
+                multiplayerEncounterBonusPerExtraPlayer = 0.08;
+                multiplayerDeathMercySeconds = 60;
+                multiplayerDogpilePenalty = 24.0;
+                illagerGrudgesEnabled = false;
+                illagerRivalriesEnabled = false;
+                illagerFactionBannersEnabled = false;
+                illagerBountyHuntersEnabled = false;
+                warmarshalHealthBonus = 0.75;
+                warmarshalDamageBonus = 0.25;
+                goatHornCommandEnabled = false;
+                antiFarmTier1Crowd = 10;
+                antiFarmTier2Crowd = 18;
+                antiFarmTier3Crowd = 28;
             }
-            case BALANCED -> {
+            case FANTASY -> {
                 naturalSquadChanceMax = 0.60;
                 statHealthBonusMax = 0.35;
                 statDamageBonusMax = 0.20;
@@ -552,19 +590,6 @@ public final class WarbandConfig {
                 antiFarmTier1Crowd = 8;
                 antiFarmTier2Crowd = 14;
                 antiFarmTier3Crowd = 22;
-            }
-            case BRUTAL -> {
-                naturalSquadChanceMax = 0.75;
-                statHealthBonusMax = 0.45;
-                statDamageBonusMax = 0.28;
-                maxSmartMobsPerPlayer = 36;
-                multiplayerSmartMobsPerExtraPlayer = 12;
-                multiplayerEncounterBonusPerExtraPlayer = 0.16;
-                multiplayerDeathMercySeconds = 25;
-                multiplayerDogpilePenalty = 12.0;
-                antiFarmTier1Crowd = 6;
-                antiFarmTier2Crowd = 10;
-                antiFarmTier3Crowd = 16;
             }
         }
     }

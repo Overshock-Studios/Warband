@@ -52,14 +52,19 @@ public final class DifficultyManager {
                     * WarbandConfig.vanillaRegionalDifficultyWeight;
             value = Math.max(value, vanillaFloor);
         }
-        // Apply dimension bonus before the global ceiling so Easy/Normal actually
-        // constrain dimensional pressure, otherwise the End sat at 1.0 regardless.
-        value += dimensionBonus(level);
-        // Spawn-safe scaling for REGIONAL mode (DISTANCE already bakes this in):
-        // in the overworld, anything inside safeRadius stays calm and pressure
-        // ramps to full only by maxDifficultyRadius.
+        // Spawn-safe scaling for REGIONAL mode (DISTANCE already bakes a long
+        // world-distance ramp in): the immediate spawn area stays calm, then
+        // regional memory takes over quickly. Using maxDifficultyRadius here
+        // made learned regional pressure look broken near spawn.
         if (WarbandConfig.difficultyMode == DifficultyMode.REGIONAL) {
-            value *= spawnDistanceScale(level, pos);
+            value *= regionalSpawnScale(level, pos);
+        }
+        // Apply environmental bonuses after the regional learner so newly-entered
+        // caves/dimensions can still feel dangerous, while the immediate spawn
+        // safe radius remains fully vanilla in the Overworld.
+        if (!insideOverworldSafeRadius(level, pos)) {
+            value += dimensionBonus(level);
+            value += overworldDepthBonus(level, pos);
         }
         if (WarbandConfig.respectGlobalDifficulty) {
             value *= globalCeiling(global);
@@ -78,6 +83,42 @@ public final class DifficultyManager {
         double safe = WarbandConfig.safeRadius;
         double max = Math.max(safe + 1.0, WarbandConfig.maxDifficultyRadius);
         return clamp01((dist - safe) / (max - safe));
+    }
+
+    /** Regional spawn grace: calm inside safeRadius, full strength after regionalSpawnRampBlocks. */
+    public static double regionalSpawnScale(ServerLevel level, BlockPos pos) {
+        if (!level.dimension().equals(Level.OVERWORLD)) return 1.0;
+        if (level.getServer() == null) return 1.0;
+        double safe = WarbandConfig.safeRadius;
+        if (safe <= 0.0) return 1.0;
+        BlockPos spawn = level.getServer().overworld().getRespawnData().pos();
+        double dx = pos.getX() - spawn.getX();
+        double dz = pos.getZ() - spawn.getZ();
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        return clamp01((dist - safe) / WarbandConfig.regionalSpawnRampBlocks);
+    }
+
+    /** True only in the fully protected Overworld spawn-safe circle. */
+    public static boolean insideOverworldSafeRadius(ServerLevel level, BlockPos pos) {
+        if (!level.dimension().equals(Level.OVERWORLD)) return false;
+        if (level.getServer() == null) return false;
+        double safe = WarbandConfig.safeRadius;
+        if (safe <= 0.0) return false;
+        BlockPos spawn = level.getServer().overworld().getRespawnData().pos();
+        double dx = pos.getX() - spawn.getX();
+        double dz = pos.getZ() - spawn.getZ();
+        return Math.sqrt(dx * dx + dz * dz) <= safe;
+    }
+
+    /** Additive Overworld depth pressure, independent of distance/regional mode. */
+    public static double overworldDepthBonus(ServerLevel level, BlockPos pos) {
+        if (!WarbandConfig.overworldDepthDifficultyEnabled) return 0.0;
+        if (!level.dimension().equals(Level.OVERWORLD)) return 0.0;
+        int start = WarbandConfig.overworldDepthStartY;
+        int max = WarbandConfig.overworldDepthMaxY;
+        if (start == max || pos.getY() >= start) return 0.0;
+        double t = (start - pos.getY()) / (double) Math.max(1, start - max);
+        return clamp01(t) * WarbandConfig.overworldDepthBonusMax;
     }
 
     /** Per-dimension additive pressure, the Nether and End are inherently harsher. */

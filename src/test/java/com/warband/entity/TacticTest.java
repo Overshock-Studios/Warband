@@ -60,6 +60,16 @@ class TacticTest {
         assertTrue(Tactic.has(mask, Tactic.STICKY_PATH));
     }
 
+    @Test
+    void endermanGetsDisruptAtThreshold() {
+        int before = choose(Tactic.Subject.ENDERMAN, 0.54);
+        int mask = choose(Tactic.Subject.ENDERMAN, 0.55);
+
+        assertFalse(Tactic.has(before, Tactic.ENDERMAN_DISRUPT));
+        assertTrue(Tactic.has(mask, Tactic.ENDERMAN_DISRUPT));
+        assertTrue(Tactic.has(mask, Tactic.PRESSURE_UNREACHABLE));
+    }
+
     private static int choose(Tactic.Subject subject, double difficulty) {
         return Tactic.chooseForSubjects(EnumSet.of(subject), difficulty, Role.NONE);
     }

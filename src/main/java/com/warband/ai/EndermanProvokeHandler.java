@@ -8,6 +8,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -26,18 +27,11 @@ public final class EndermanProvokeHandler {
             if (!WarbandConfig.endermanProvokeEnabled) return true;
             if (!(entity instanceof EnderMan enderman)) return true;
             if (!source.is(DamageTypeTags.IS_PROJECTILE)) return true;
-            Entity attacker = source.getEntity();
-            if (!(attacker instanceof Player player) || !player.isAlive() || player.isSpectator()) return true;
+            Player player = projectileOwner(source.getEntity(), source.getDirectEntity());
+            if (player == null || !player.isAlive() || player.isSpectator()) return true;
 
             Vec3 origin = enderman.position();
-            // Drop in front of the shooter for the jumpscare; fall back behind
-            // them if the front is blocked.
-            Vec3 front = player.position().add(player.getLookAngle().scale(3.0));
-            boolean teleported = enderman.randomTeleport(front.x, front.y, front.z, true);
-            if (!teleported) {
-                Vec3 back = player.position().subtract(player.getLookAngle().scale(2.5));
-                teleported = enderman.randomTeleport(back.x, back.y, back.z, true);
-            }
+            boolean teleported = teleportNearShooter(enderman, player);
             if (teleported) {
                 enderman.level().playSound(null, origin.x, origin.y, origin.z,
                         SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 1.0f, 1.0f);
@@ -48,5 +42,31 @@ public final class EndermanProvokeHandler {
             enderman.setBeingStaredAt();
             return false;
         });
+    }
+
+    private static Player projectileOwner(Entity sourceEntity, Entity directEntity) {
+        if (sourceEntity instanceof Player player) return player;
+        if (directEntity instanceof Projectile projectile && projectile.getOwner() instanceof Player player) {
+            return player;
+        }
+        return null;
+    }
+
+    private static boolean teleportNearShooter(EnderMan enderman, Player player) {
+        Vec3 look = player.getLookAngle();
+        Vec3[] attempts = {
+                player.position().add(look.scale(3.0)),
+                player.position().subtract(look.scale(2.5)),
+                player.position().add(look.yRot(1.5707964F).scale(2.5)),
+                player.position().add(look.yRot(-1.5707964F).scale(2.5)),
+                player.position().add(look.scale(4.5)),
+                player.position().subtract(look.scale(4.0))
+        };
+        for (Vec3 attempt : attempts) {
+            if (enderman.randomTeleport(attempt.x, attempt.y, attempt.z, true)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

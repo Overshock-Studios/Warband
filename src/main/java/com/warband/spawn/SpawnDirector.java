@@ -75,6 +75,7 @@ public final class SpawnDirector {
      */
     public static void onMobFinalizeSpawn(Mob mob, ServerLevelAccessor accessor, EntitySpawnReason reason) {
         if (!(mob instanceof Enemy)) return;
+        if (isDyingOrGone(mob)) return;
         if (!WORLD_SPAWNS.contains(reason)) return;
         if (SquadCoordinator.isSpawningSquadmate()) return;
         if (BossDirector.isSpawningWitherMinion()) return;
@@ -99,6 +100,7 @@ public final class SpawnDirector {
      */
     public static void tryStampLoaded(Mob mob, ServerLevel level) {
         if (!(mob instanceof Enemy)) return;
+        if (isDyingOrGone(mob)) return;
         if (MobData.isStamped(mob)) return;
         if (SquadCoordinator.isSpawningSquadmate()) return;
         if (BossDirector.isSpawningWitherMinion()) return;
@@ -107,6 +109,7 @@ public final class SpawnDirector {
     }
 
     private static void runStampPipeline(Mob mob, ServerLevel level, EntitySpawnReason reason) {
+        if (isDyingOrGone(mob)) return;
         double difficulty = DifficultyManager.getDifficulty(level, mob.blockPosition());
         if (IllagerInvasionCompat.isIllagerLike(mob)) {
             // Naturally-spawned stronghold illagers (e.g. outpost pillagers) are
@@ -151,6 +154,7 @@ public final class SpawnDirector {
     }
 
     private static void stamp(Mob mob, double difficulty, boolean assignTactics) {
+        if (isDyingOrGone(mob)) return;
         int tactics = assignTactics ? Tactic.chooseFor(mob, difficulty, Role.NONE) : 0;
         MobData.set(mob, new MobData((float) difficulty, Role.NONE, MobData.NO_SQUAD, tactics));
         IllagerFactionSystem.assignIfNeeded(mob);
@@ -163,6 +167,7 @@ public final class SpawnDirector {
 
     /** Stamp a mob with explicit squad metadata. */
     public static void stamp(Mob mob, double difficulty, Role role, int squadId) {
+        if (isDyingOrGone(mob)) return;
         int tactics = Tactic.chooseFor(mob, difficulty, role);
         MobData.set(mob, new MobData((float) difficulty, role, squadId, tactics));
         IllagerFactionSystem.assignIfNeeded(mob);
@@ -181,12 +186,14 @@ public final class SpawnDirector {
      * a heavy boss health/damage layer and lasting Strength, and renamed.
      */
     public static void crownWarmarshal(Mob mob) {
+        if (isDyingOrGone(mob)) return;
         // Without Illager Invasion installed, the natural mansion boss is just an
         // Evoker — same as any other mansion mob. Promote it to a vanilla Illusioner,
         // which is otherwise non-spawning, so the Warmarshal reads as a distinct
         // apex enemy. Skip the swap when Illager Invasion is loaded; let its boss
         // tier (Invoker/Provoker) stand as the Warmarshal in its own right.
         Mob warmarshal = maybeSwapToIllusioner(mob);
+        if (isDyingOrGone(warmarshal)) return;
         // The command-AI upgrade: guarantees command goals and squad leadership,
         // and sets the mob's MobData (difficulty 1.0, LEADER, ILLAGER_COMMAND).
         // A Warmarshal is the smartest illager in the garrison, not just the
@@ -227,6 +234,7 @@ public final class SpawnDirector {
     }
 
     private static void applyStatBuffs(Mob mob, double difficulty) {
+        if (isDyingOrGone(mob)) return;
         // Linear in difficulty: tactical AI switches on at ~0.25, so enhanced mobs
         // need real durability through the mid-game, not a back-loaded square curve.
         double statScale = difficulty;
@@ -262,6 +270,7 @@ public final class SpawnDirector {
     }
 
     private static void stampIllagerIdentityOnly(Mob mob, double difficulty) {
+        if (isDyingOrGone(mob)) return;
         if (!IllagerInvasionCompat.isIllagerLike(mob)) return;
         IllagerFactionSystem.assignIfNeeded(mob);
         FactionBanner.equipIfNeeded(mob);
@@ -291,5 +300,9 @@ public final class SpawnDirector {
 
     private static Identifier modifierId(String path) {
         return Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, path);
+    }
+
+    private static boolean isDyingOrGone(Mob mob) {
+        return mob.isRemoved() || mob.isDeadOrDying() || !mob.isAlive();
     }
 }

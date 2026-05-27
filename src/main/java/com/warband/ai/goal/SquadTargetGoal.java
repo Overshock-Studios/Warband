@@ -1,6 +1,7 @@
 package com.warband.ai.goal;
 
 import com.warband.ai.Squad;
+import com.warband.ai.VisibilityRules;
 import com.warband.entity.MobData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -27,6 +28,7 @@ public final class SquadTargetGoal extends Goal implements WarbandGoal {
 
     @Override
     public boolean canUse() {
+        if (!mob.isAlive() || mob.isDeadOrDying() || mob.isRemoved()) return false;
         LivingEntity target = mob.getTarget();
         return isSquadmate(target) || shouldAdoptVisibleSquadTarget(target);
     }
@@ -40,7 +42,7 @@ public final class SquadTargetGoal extends Goal implements WarbandGoal {
         }
 
         LivingEntity squadTarget = squad.target();
-        if (squadTarget != null && squadTarget.isAlive() && mob.hasLineOfSight(squadTarget)
+        if (VisibilityRules.canUseTacticalSight(mob, squadTarget)
                 && !shouldRespectEyeContact(squadTarget)) {
             mob.setTarget(squadTarget);
         }
@@ -50,8 +52,7 @@ public final class SquadTargetGoal extends Goal implements WarbandGoal {
         LivingEntity squadTarget = squad.target();
         return currentTarget == null
                 && squadTarget != null
-                && squadTarget.isAlive()
-                && mob.hasLineOfSight(squadTarget)
+                && VisibilityRules.canUseTacticalSight(mob, squadTarget)
                 && !shouldRespectEyeContact(squadTarget);
     }
 

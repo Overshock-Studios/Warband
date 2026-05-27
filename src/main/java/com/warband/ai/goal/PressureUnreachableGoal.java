@@ -34,13 +34,19 @@ public final class PressureUnreachableGoal extends SquadGoal {
         LivingEntity target = visibleTarget();
         BlockPos pressurePoint = target != null ? target.blockPosition() : squad.lastKnownPos();
         if (pressurePoint == null) return false;
+
+        MobData data = MobData.get(mob);
+        pressureTarget = target;
+        if (target != null && data.hasTactic(Tactic.LEAP_UNREACHABLE) && canShortHop(target)) {
+            action = Action.LEAP;
+            return true;
+        }
+
         if (mob.distanceToSqr(pressurePoint.getCenter()) < 8.0 * 8.0) return false;
 
         boolean stalled = mob.getNavigation().isDone() || mob.getNavigation().isStuck();
         if (!stalled) return false;
 
-        MobData data = MobData.get(mob);
-        pressureTarget = target;
         if (target != null && data.hasTactic(Tactic.LEAP_UNREACHABLE) && canLeap(target)) {
             action = Action.LEAP;
             return true;
@@ -85,6 +91,12 @@ public final class PressureUnreachableGoal extends SquadGoal {
         Vec3 toTarget = target.position().subtract(mob.position());
         double horizontal = Math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
         return horizontal >= 2.0 && horizontal <= 12.0 && target.getY() >= mob.getY() + 1.0;
+    }
+
+    private boolean canShortHop(LivingEntity target) {
+        double yDelta = target.getY() - mob.getY();
+        if (yDelta < 1.0 || yDelta > 2.75) return false;
+        return mob.distanceToSqr(target) <= 5.5 * 5.5 && mob.onGround();
     }
 
     private void doLeap(LivingEntity target) {

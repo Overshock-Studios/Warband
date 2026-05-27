@@ -75,16 +75,14 @@ public final class IllagerGrudgeSystem {
     public static void register() {
         ServerLivingEntityEvents.AFTER_DAMAGE.register(IllagerGrudgeSystem::afterDamage);
         ServerLivingEntityEvents.AFTER_DEATH.register(IllagerGrudgeSystem::afterDeath);
-        ServerLivingEntityEvents.ALLOW_DAMAGE.register(IllagerGrudgeSystem::bountyReviveHook);
         ServerTickEvents.END_SERVER_TICK.register(IllagerGrudgeSystem::tick);
     }
 
     /** Bounty hunters survive a single killing blow at 50% HP — totem-style revive without the item. */
-    private static boolean bountyReviveHook(LivingEntity entity, DamageSource source, float amount) {
-        if (!(entity instanceof Mob mob)) return true;
-        if (!Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_HUNTER))) return true;
-        if (Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_REVIVED))) return true;
-        if (entity.getHealth() - amount > 0.0f) return true;
+    public static boolean tryBountyRevive(LivingEntity entity, DamageSource source) {
+        if (!(entity instanceof Mob mob)) return false;
+        if (!Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_HUNTER))) return false;
+        if (Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_REVIVED))) return false;
         mob.setAttached(WarbandAttachments.BOUNTY_REVIVED, true);
         mob.setHealth(mob.getMaxHealth() * 0.5f);
         mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
@@ -100,7 +98,7 @@ public final class IllagerGrudgeSystem {
                 player.sendSystemMessage(Component.literal("§7\"Not yet. Not like this.\""), true);
             }
         }
-        return false;
+        return true;
     }
 
     private static void afterDamage(LivingEntity entity, DamageSource source,
@@ -682,11 +680,8 @@ public final class IllagerGrudgeSystem {
                 new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_SWORD),
                 net.minecraft.world.item.enchantment.Enchantments.SHARPNESS, 4);
         enchantStack(hunter, sword, net.minecraft.world.item.enchantment.Enchantments.UNBREAKING, 3);
-        // Offhand normally carries the faction banner — only fill if banner is disabled.
-        if (hunter.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND).isEmpty()) {
-            hunter.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND, sword);
-            hunter.setDropChance(net.minecraft.world.entity.EquipmentSlot.OFFHAND, 0.01f);
-        }
+        hunter.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND, sword);
+        hunter.setDropChance(net.minecraft.world.entity.EquipmentSlot.OFFHAND, 0.01f);
     }
 
     private static void equipDiamond(Mob hunter, net.minecraft.world.entity.EquipmentSlot slot,
