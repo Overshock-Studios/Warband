@@ -111,6 +111,12 @@ public final class WarbandAttachments {
             builder -> builder.persistent(IllagerGrudge.CODEC.listOf()).copyOnDeath()
     );
 
+    /** On a player: set once after the first factioned-illager kill so the grace grudge only fires once. */
+    public static final AttachmentType<Boolean> FIRST_KILL_GRACE_USED = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "first_kill_grace_used"),
+            builder -> builder.persistent(Codec.BOOL).copyOnDeath()
+    );
+
     /** On a player: faction heat used to trigger elite bounty hunters. */
     public static final AttachmentType<java.util.List<FactionReputation>> ILLAGER_REPUTATION = AttachmentRegistry.create(
             Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "illager_reputation"),

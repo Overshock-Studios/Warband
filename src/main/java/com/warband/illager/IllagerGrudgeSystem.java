@@ -53,6 +53,16 @@ public final class IllagerGrudgeSystem {
     private static final int RIVAL_INTERCEPT_CHANCE = 25;
     /** Faction heat added per illager killed inside that faction's mansion. */
     private static final int MANSION_HEAT_PER_KILL = 8;
+    /** Small heat drip for any factioned illager killed in the open. Builds toward bounty heat over time. */
+    private static final int FIELD_HEAT_PER_KILL = 2;
+    /** Witness count above which the notability filter is relaxed — a crowd remembers regardless of rank. */
+    private static final int CROWD_WITNESS_THRESHOLD = 3;
+    /** Cooldown between unprompted WAR-state patrols (per faction, per player). */
+    private static final int WAR_PATROL_COOLDOWN_TICKS = 20 * 60 * 12;
+    /** Cooldown between full CRUSADE assaults (per faction, per player). */
+    private static final int CRUSADE_COOLDOWN_TICKS = 20 * 60 * 30;
+    /** Heat shed by a faction whenever it commits a crusade — wars cannot stay perpetually maxed. */
+    private static final int CRUSADE_HEAT_RELIEF = 35;
 
     private static final Map<UUID, PendingSurvivor> PENDING = new HashMap<>();
     private static int tickCounter;
@@ -85,7 +95,7 @@ public final class IllagerGrudgeSystem {
         if (inFactionSeat(mob)) return;
 
         for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
-            recordWitnesses((ServerLevel) mob.level(), mob, participant, true);
+            recordWitnesses((ServerLevel) mob.level(), mob, participant, true, false);
         }
     }
 
@@ -97,16 +107,24 @@ public final class IllagerGrudgeSystem {
                 && MobData.isStamped(mob)
                 && !isGrudgeSpawned(mob)
                 && !RaidCompat.isActiveRaider(mob)) {
+            IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
+            long now = mob.level().getGameTime();
             if (inFactionSeat(mob)) {
                 // Assaulting a faction's seat raises its heat (→ a bounty hunter)
                 // rather than mustering revenge patrols back into the ruin.
                 for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
-                    addReputation(participant, IllagerFactionSystem.factionOrDefault(mob),
-                            MANSION_HEAT_PER_KILL, mob.level().getGameTime() + BOUNTY_RETRY_TICKS);
+                    addReputation(participant, faction, MANSION_HEAT_PER_KILL, now + BOUNTY_RETRY_TICKS);
                 }
             } else {
                 for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
-                    recordWitnesses((ServerLevel) mob.level(), mob, participant, true);
+                    // Every factioned kill nudges heat — slow drip so /warband intel
+                    // shows the faction is "watching" even before a notable grudge forms.
+                    addReputation(participant, faction, FIELD_HEAT_PER_KILL, now + BOUNTY_RETRY_TICKS);
+                    boolean firstKill = !Boolean.TRUE.equals(participant.getAttached(WarbandAttachments.FIRST_KILL_GRACE_USED));
+                    recordWitnesses((ServerLevel) mob.level(), mob, participant, true, firstKill);
+                    if (firstKill) {
+                        participant.setAttached(WarbandAttachments.FIRST_KILL_GRACE_USED, true);
+                    }
                 }
             }
         }
@@ -143,22 +161,36 @@ public final class IllagerGrudgeSystem {
                 && StructureCompat.inFactionSeat(level, mob.blockPosition());
     }
 
-    private static void recordWitnesses(ServerLevel level, Mob victim, ServerPlayer player, boolean includeVictim) {
+    private static void recordWitnesses(ServerLevel level, Mob victim, ServerPlayer player,
+                                        boolean includeVictim, boolean relaxNotable) {
         long now = level.getGameTime();
         long originPos = victim.blockPosition().asLong();
         String originDimension = level.dimension().toString();
         AABB box = AABB.ofSize(victim.position(), WITNESS_RADIUS * 2.0, WITNESS_RADIUS, WITNESS_RADIUS * 2.0);
-        List<Mob> witnesses = level.getEntitiesOfClass(Mob.class, box, mob ->
+        // First pass: every eligible illager in range, without the notability filter,
+        // so we can apply the "crowd remembers" rule based on the raw witness count.
+        List<Mob> candidates = level.getEntitiesOfClass(Mob.class, box, mob ->
                 mob.isAlive()
                         && MobData.isStamped(mob)
                         && IllagerInvasionCompat.isIllagerLike(mob)
                         && !isGrudgeSpawned(mob)
-                        // Only notable illagers (leaders / high-tier) form grudges,
-                        // so the one that "returns" is a distinct enemy, decoupled
-                        // from nametag visibility, which is now hover-only.
-                        && isNotable(mob)
                         && (includeVictim || mob != victim)
                         && (mob == victim || mob.hasLineOfSight(victim) || mob.distanceToSqr(victim) < 12.0 * 12.0));
+
+        // A crowd (3+) remembers any kill; otherwise only notable mobs / banner-carriers
+        // form grudges. relaxNotable also skips the filter (used for the player's first
+        // factioned kill, so the system always introduces itself at least once).
+        List<Mob> witnesses;
+        if (relaxNotable || candidates.size() >= CROWD_WITNESS_THRESHOLD) {
+            witnesses = candidates;
+        } else {
+            witnesses = new ArrayList<>();
+            for (Mob candidate : candidates) {
+                if (isNotable(candidate) || carriesFactionBanner(candidate)) {
+                    witnesses.add(candidate);
+                }
+            }
+        }
 
         for (Mob witness : witnesses) {
             if (witness == victim && witness.isDeadOrDying()) continue;
@@ -185,6 +217,7 @@ public final class IllagerGrudgeSystem {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             maybeLaunchRevenge(player, now);
             maybeLaunchBountyHunter(player, now);
+            maybeLaunchVengeance(player, now);
         }
     }
 
@@ -238,7 +271,11 @@ public final class IllagerGrudgeSystem {
             IllagerGrudge grudge = grudges.get(i);
             if (grudge.readyAt() > now || grudge.attempts() >= 3) continue;
             if (player.getRandom().nextFloat() > 0.35f) {
-                grudges.set(i, grudge.attempted(now + RETRY_DELAY_TICKS));
+                // Random gate miss — reschedule without burning an attempt, otherwise
+                // unlucky rolls can quietly retire a grudge in ~9 minutes with no patrol spawned.
+                grudges.set(i, new IllagerGrudge(grudge.survivorName(), grudge.faction(), grudge.difficulty(),
+                        grudge.anger(), now + RETRY_DELAY_TICKS, grudge.attempts(),
+                        grudge.originPos(), grudge.originDimension()));
                 break;
             }
             List<IllagerGrudge> party = readyFactionGrudges(grudges, grudge.faction(), now);
@@ -269,13 +306,13 @@ public final class IllagerGrudgeSystem {
         List<IllagerGrudge> grudges = grudges(player);
         List<FactionReputation> reputations = reputations(player);
         if (grudges.isEmpty() && reputations.isEmpty()) {
-            return List.of("No faction intel on you yet.");
+            return List.of("No faction intel on you yet. Kill a factioned illager and they will start to take notice.");
         }
         if (!reputations.isEmpty()) {
             lines.add("Faction heat:");
             for (FactionReputation reputation : reputations) {
-                String posture = reputation.heat() >= BOUNTY_HEAT_THRESHOLD ? "bounty" : reputation.heat() >= 50 ? "hostile" : "watching";
-                lines.add("  " + reputation.faction().displayName() + ": " + reputation.heat() + " (" + posture + ")");
+                lines.add("  " + reputation.faction().displayName() + ": " + reputation.heat()
+                        + " (" + reputation.state().label() + ")");
             }
         }
         if (!grudges.isEmpty()) {
@@ -284,6 +321,8 @@ public final class IllagerGrudgeSystem {
                 lines.add("  " + grudge.survivorName() + " / " + grudge.faction().displayName()
                         + " anger " + grudge.anger() + " attempts " + grudge.attempts());
             }
+        } else if (!reputations.isEmpty()) {
+            lines.add("No named survivors yet — no notable illagers escaped to remember you.");
         }
         return lines;
     }
@@ -339,11 +378,120 @@ public final class IllagerGrudgeSystem {
             if (spawnBountyHunter(player, reputation)) {
                 reputations.set(i, reputation.coolDown(now + BOUNTY_RETRY_TICKS * 2L));
             } else {
-                reputations.set(i, new FactionReputation(reputation.faction(), reputation.heat(), now + BOUNTY_RETRY_TICKS));
+                reputations.set(i, new FactionReputation(reputation.faction(), reputation.heat(),
+                        now + BOUNTY_RETRY_TICKS, reputation.warReadyAt(), reputation.crusadeReadyAt()));
             }
             player.setAttached(WarbandAttachments.ILLAGER_REPUTATION, trimReputation(reputations));
             return;
         }
+    }
+
+    /**
+     * Unprompted faction action driven purely by escalation state: WAR triggers periodic
+     * field patrols, CRUSADE triggers mansion-led assaults near the player's home/respawn.
+     * Both have long per-faction cooldowns so a player at max heat is harassed, not flooded.
+     */
+    private static void maybeLaunchVengeance(ServerPlayer player, long now) {
+        if (!WarbandConfig.illagerFactionsEnabled || !WarbandConfig.illagerGrudgesEnabled) return;
+        List<FactionReputation> reputations = new ArrayList<>(reputations(player));
+        if (reputations.isEmpty()) return;
+
+        boolean mutated = false;
+        for (int i = 0; i < reputations.size(); i++) {
+            FactionReputation reputation = reputations.get(i);
+            VengeanceState state = reputation.state();
+            if (state == VengeanceState.CRUSADE && reputation.crusadeReadyAt() <= now) {
+                if (spawnCrusade(player, reputation)) {
+                    // Keep the faction in at least WAR after a crusade — a single
+                    // assault should not reset months of player-faction conflict.
+                    int reducedHeat = Math.max(80, reputation.heat() - CRUSADE_HEAT_RELIEF);
+                    reputations.set(i, new FactionReputation(reputation.faction(), reducedHeat,
+                            reputation.bountyReadyAt(),
+                            now + WAR_PATROL_COOLDOWN_TICKS,
+                            now + CRUSADE_COOLDOWN_TICKS));
+                } else {
+                    reputations.set(i, reputation.withCrusadeReady(now + CRUSADE_COOLDOWN_TICKS / 4));
+                }
+                mutated = true;
+                break;
+            }
+            if (state == VengeanceState.WAR && reputation.warReadyAt() <= now) {
+                if (spawnWarPatrol(player, reputation)) {
+                    reputations.set(i, reputation.withWarReady(now + WAR_PATROL_COOLDOWN_TICKS));
+                } else {
+                    reputations.set(i, reputation.withWarReady(now + WAR_PATROL_COOLDOWN_TICKS / 4));
+                }
+                mutated = true;
+                break;
+            }
+        }
+        if (mutated) {
+            player.setAttached(WarbandAttachments.ILLAGER_REPUTATION, trimReputation(reputations));
+        }
+    }
+
+    private static boolean spawnWarPatrol(ServerPlayer player, FactionReputation reputation) {
+        ServerLevel level = (ServerLevel) player.level();
+        BlockPos origin = findSpawnPos(level, player.getRandom(), player.getBlockX(), player.getBlockZ());
+        if (origin == null) return false;
+
+        double difficulty = Math.min(1.0, 0.55 + reputation.heat() / 400.0);
+        int size = 3 + player.getRandom().nextInt(2)
+                + MultiplayerDirector.revengePartyBonus(level, player.blockPosition());
+        List<Mob> spawned = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            BlockPos pos = origin.offset(player.getRandom().nextInt(7) - 3, 0, player.getRandom().nextInt(7) - 3);
+            Mob mob = spawnMember(level, pos, difficulty, i);
+            if (mob == null) continue;
+            IllagerFactionSystem.setFaction(mob, reputation.faction());
+            markGrudgeSpawned(mob);
+            mob.setTarget(player);
+            spawned.add(mob);
+        }
+        if (spawned.isEmpty()) return false;
+        SquadCoordinator.createSquad(level, spawned, difficulty);
+        TacticalEffects.horn(level, origin.getCenter());
+        player.sendSystemMessage(Component.literal(
+                "A war patrol of the " + reputation.faction().displayName() + " moves to find you."));
+        return true;
+    }
+
+    private static boolean spawnCrusade(ServerPlayer player, FactionReputation reputation) {
+        ServerLevel level = (ServerLevel) player.level();
+        // Crusades muster near the player's home (respawn point if set) for that
+        // "they came for my base" beat; falls back to current position otherwise.
+        BlockPos anchor = player.getRespawnConfig() != null
+                && player.getRespawnConfig().respawnData().dimension().equals(level.dimension())
+                ? player.getRespawnConfig().respawnData().pos()
+                : player.blockPosition();
+        BlockPos origin = findSpawnPos(level, player.getRandom(), anchor.getX(), anchor.getZ());
+        if (origin == null) {
+            origin = findSpawnPos(level, player.getRandom(), player.getBlockX(), player.getBlockZ());
+        }
+        if (origin == null) return false;
+
+        double difficulty = Math.min(1.0, 0.85 + reputation.heat() / 800.0);
+        int size = 6 + player.getRandom().nextInt(3)
+                + MultiplayerDirector.revengePartyBonus(level, player.blockPosition()) * 2;
+        List<Mob> spawned = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            BlockPos pos = origin.offset(player.getRandom().nextInt(9) - 4, 0, player.getRandom().nextInt(9) - 4);
+            Mob mob = spawnMember(level, pos, difficulty, i);
+            if (mob == null) continue;
+            IllagerFactionSystem.setFaction(mob, reputation.faction());
+            markGrudgeSpawned(mob);
+            mob.setTarget(player);
+            spawned.add(mob);
+        }
+        if (spawned.isEmpty()) return false;
+        SquadCoordinator.createSquad(level, spawned, difficulty);
+        Mob leader = spawned.getFirst();
+        leader.setCustomName(Component.literal("Crusade Captain of the " + reputation.faction().displayName()));
+        leader.setCustomNameVisible(true);
+        TacticalEffects.horn(level, origin.getCenter());
+        player.sendSystemMessage(Component.literal(
+                "A crusade of the " + reputation.faction().displayName() + " has come for you."));
+        return true;
     }
 
     private static boolean spawnBountyHunter(ServerPlayer player, FactionReputation reputation) {
@@ -455,6 +603,12 @@ public final class IllagerGrudgeSystem {
         return data.role() == Role.LEADER || data.difficulty() >= 0.65f;
     }
 
+    /** Banner-bearing illagers represent the faction directly; their kills always register. */
+    private static boolean carriesFactionBanner(Mob mob) {
+        return mob.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND).getItem()
+                instanceof net.minecraft.world.item.BannerItem;
+    }
+
     private static void markGrudgeSpawned(Mob mob) {
         mob.setAttached(WarbandAttachments.ILLAGER_GRUDGE_SPAWNED, true);
     }
@@ -501,7 +655,8 @@ public final class IllagerGrudgeSystem {
     }
 
     private static void addReputation(ServerPlayer player, IllagerFaction faction, int heat, long bountyReadyAt) {
-        if (!WarbandConfig.illagerBountyHuntersEnabled) return;
+        // Heat is also the display value for /warband intel — track it regardless
+        // of whether bounty hunters are enabled; only the hunter spawn is gated.
         List<FactionReputation> reputations = new ArrayList<>(reputations(player));
         for (int i = 0; i < reputations.size(); i++) {
             FactionReputation reputation = reputations.get(i);

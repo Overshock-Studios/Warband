@@ -55,10 +55,29 @@ public final class DifficultyManager {
         // Apply dimension bonus before the global ceiling so Easy/Normal actually
         // constrain dimensional pressure, otherwise the End sat at 1.0 regardless.
         value += dimensionBonus(level);
+        // Spawn-safe scaling for REGIONAL mode (DISTANCE already bakes this in):
+        // in the overworld, anything inside safeRadius stays calm and pressure
+        // ramps to full only by maxDifficultyRadius.
+        if (WarbandConfig.difficultyMode == DifficultyMode.REGIONAL) {
+            value *= spawnDistanceScale(level, pos);
+        }
         if (WarbandConfig.respectGlobalDifficulty) {
             value *= globalCeiling(global);
         }
         return clamp01(value);
+    }
+
+    /** Spawn-distance multiplier in [0, 1]. Overworld only; other dimensions are not safe-radius-gated. */
+    private static double spawnDistanceScale(ServerLevel level, BlockPos pos) {
+        if (!level.dimension().equals(Level.OVERWORLD)) return 1.0;
+        if (level.getServer() == null) return 1.0;
+        BlockPos spawn = level.getServer().overworld().getRespawnData().pos();
+        double dx = pos.getX() - spawn.getX();
+        double dz = pos.getZ() - spawn.getZ();
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        double safe = WarbandConfig.safeRadius;
+        double max = Math.max(safe + 1.0, WarbandConfig.maxDifficultyRadius);
+        return clamp01((dist - safe) / (max - safe));
     }
 
     /** Per-dimension additive pressure, the Nether and End are inherently harsher. */
