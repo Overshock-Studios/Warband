@@ -1,0 +1,16 @@
+{
+  "parent": "warband:illager_war/bounty_summoned",
+  "display": {
+    "icon": { "id": "minecraft:iron_sword" },
+    "title": { "translate": "advancements.warband.illager_war.at_war.title", "fallback": "At War" },
+    "description": { "translate": "advancements.warband.illager_war.at_war.description", "fallback": "Push a faction to send unprompted war patrols after you." },
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "war": {
+      "trigger": "warband:event",
+      "conditions": { "kind": "faction_at_war" }
+    }
+  }
+}

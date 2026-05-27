@@ -1,0 +1,16 @@
+{
+  "parent": "warband:illager_war/root",
+  "display": {
+    "icon": { "id": "minecraft:writable_book" },
+    "title": { "translate": "advancements.warband.illager_war.first_grudge.title", "fallback": "Slipped Away" },
+    "description": { "translate": "advancements.warband.illager_war.first_grudge.description", "fallback": "Let a notable illager escape a fight. They will not forget." },
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "grudge": {
+      "trigger": "warband:event",
+      "conditions": { "kind": "first_grudge" }
+    }
+  }
+}

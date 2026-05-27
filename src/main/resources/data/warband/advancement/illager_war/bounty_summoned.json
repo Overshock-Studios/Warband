@@ -1,0 +1,16 @@
+{
+  "parent": "warband:illager_war/first_revenge",
+  "display": {
+    "icon": { "id": "minecraft:gold_ingot" },
+    "title": { "translate": "advancements.warband.illager_war.bounty_summoned.title", "fallback": "Bounty Posted" },
+    "description": { "translate": "advancements.warband.illager_war.bounty_summoned.description", "fallback": "A faction puts a price on you and sends a bounty hunter." },
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "bounty": {
+      "trigger": "warband:event",
+      "conditions": { "kind": "bounty_summoned" }
+    }
+  }
+}

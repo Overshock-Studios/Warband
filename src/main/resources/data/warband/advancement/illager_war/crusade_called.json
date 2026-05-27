@@ -1,0 +1,17 @@
+{
+  "parent": "warband:illager_war/at_war",
+  "display": {
+    "icon": { "id": "minecraft:totem_of_undying" },
+    "title": { "translate": "advancements.warband.illager_war.crusade_called.title", "fallback": "Crusade Called" },
+    "description": { "translate": "advancements.warband.illager_war.crusade_called.description", "fallback": "A faction stages a full crusade against you." },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "crusade": {
+      "trigger": "warband:event",
+      "conditions": { "kind": "crusade_called" }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "parent": "warband:illager_war/first_grudge",
+  "display": {
+    "icon": { "id": "minecraft:crossbow" },
+    "title": { "translate": "advancements.warband.illager_war.first_revenge.title", "fallback": "Familiar Horns" },
+    "description": { "translate": "advancements.warband.illager_war.first_revenge.description", "fallback": "A faction sends a revenge patrol to find you." },
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "revenge": {
+      "trigger": "warband:event",
+      "conditions": { "kind": "first_revenge" }
+    }
+  }
+}

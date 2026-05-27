@@ -1,5 +1,6 @@
 package com.warband.illager;
 
+import com.warband.advancement.WarbandCriteria;
 import com.warband.ai.SquadCoordinator;
 import com.warband.ai.TacticalEffects;
 import com.warband.ai.MultiplayerDirector;
@@ -124,6 +125,7 @@ public final class IllagerGrudgeSystem {
                     recordWitnesses((ServerLevel) mob.level(), mob, participant, true, firstKill);
                     if (firstKill) {
                         participant.setAttached(WarbandAttachments.FIRST_KILL_GRACE_USED, true);
+                        WarbandCriteria.fire(participant, WarbandCriteria.FACTION_NOTICED);
                     }
                 }
             }
@@ -140,6 +142,7 @@ public final class IllagerGrudgeSystem {
 
         IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
         clearFaction(player, faction);
+        WarbandCriteria.fire((ServerPlayer) source.getEntity(), WarbandCriteria.WARMARSHAL_SLAIN);
         player.sendSystemMessage(Component.literal(
                 "The " + faction.displayName() + " falls into disarray, its Warmarshal is dead."));
     }
@@ -261,6 +264,7 @@ public final class IllagerGrudgeSystem {
         player.sendSystemMessage(Component.literal(
                 survivor.name + " slipped away, the " + survivor.faction.displayName()
                         + " will remember this."));
+        WarbandCriteria.fire(player, WarbandCriteria.FIRST_GRUDGE);
     }
 
     private static void maybeLaunchRevenge(ServerPlayer player, long now) {
@@ -365,6 +369,7 @@ public final class IllagerGrudgeSystem {
         maybeSpawnRivalInterception(player, grudges.getFirst(), origin, difficulty, spawned);
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.REVENGE);
         player.sendSystemMessage(Component.literal("Familiar horns answer from the " + faction.displayName() + "."), true);
+        WarbandCriteria.fire(player, WarbandCriteria.FIRST_REVENGE);
         return true;
     }
 
@@ -454,6 +459,7 @@ public final class IllagerGrudgeSystem {
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.WAR_PATROL);
         player.sendSystemMessage(Component.literal(
                 "A war patrol of the " + reputation.faction().displayName() + " moves to find you."), true);
+        WarbandCriteria.fire(player, WarbandCriteria.FACTION_AT_WAR);
         return true;
     }
 
@@ -492,6 +498,7 @@ public final class IllagerGrudgeSystem {
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.CRUSADE);
         player.sendSystemMessage(Component.literal(
                 "A crusade of the " + reputation.faction().displayName() + " has come for you."), true);
+        WarbandCriteria.fire(player, WarbandCriteria.CRUSADE_CALLED);
         return true;
     }
 
@@ -517,6 +524,7 @@ public final class IllagerGrudgeSystem {
         hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH, buffTicks, 0, false, true));
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.BOUNTY);
         player.sendSystemMessage(Component.literal("A bounty hunter from the " + reputation.faction().displayName() + " has your trail."), true);
+        WarbandCriteria.fire(player, WarbandCriteria.BOUNTY_SUMMONED);
         return true;
     }
 

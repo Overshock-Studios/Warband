@@ -40,6 +40,7 @@ public final class WarbandMod implements ModInitializer {
     public void onInitialize() {
         WarbandConfig.load(LOGGER);
         WarbandAttachments.init();
+        com.warband.advancement.WarbandCriteria.init();
         PlayerScore.register();
         RegionalDifficulty.register();
         WarbandCommand.register();

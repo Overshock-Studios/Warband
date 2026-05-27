@@ -1,0 +1,18 @@
+{
+  "parent": "warband:illager_war/crusade_called",
+  "display": {
+    "icon": { "id": "minecraft:totem_of_undying" },
+    "title": { "translate": "advancements.warband.illager_war.warmarshal_slain.title", "fallback": "Break the Faction" },
+    "description": { "translate": "advancements.warband.illager_war.warmarshal_slain.description", "fallback": "Kill a Warmarshal. Their faction falls into disarray with them." },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "warmarshal": {
+      "trigger": "warband:event",
+      "conditions": { "kind": "warmarshal_slain" }
+    }
+  },
+  "rewards": { "experience": 500 }
+}

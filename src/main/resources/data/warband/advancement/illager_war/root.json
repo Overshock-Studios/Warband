@@ -1,0 +1,16 @@
+{
+  "display": {
+    "icon": { "id": "minecraft:black_banner" },
+    "title": { "translate": "advancements.warband.illager_war.root.title", "fallback": "The Illager War" },
+    "description": { "translate": "advancements.warband.illager_war.root.description", "fallback": "Cross paths with one of the five illager factions." },
+    "background": "minecraft:block/dark_oak_planks",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "noticed": {
+      "trigger": "warband:event",
+      "conditions": { "kind": "faction_noticed" }
+    }
+  }
+}
