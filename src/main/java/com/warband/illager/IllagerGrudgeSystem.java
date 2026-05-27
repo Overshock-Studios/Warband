@@ -75,7 +75,32 @@ public final class IllagerGrudgeSystem {
     public static void register() {
         ServerLivingEntityEvents.AFTER_DAMAGE.register(IllagerGrudgeSystem::afterDamage);
         ServerLivingEntityEvents.AFTER_DEATH.register(IllagerGrudgeSystem::afterDeath);
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register(IllagerGrudgeSystem::bountyReviveHook);
         ServerTickEvents.END_SERVER_TICK.register(IllagerGrudgeSystem::tick);
+    }
+
+    /** Bounty hunters survive a single killing blow at 50% HP — totem-style revive without the item. */
+    private static boolean bountyReviveHook(LivingEntity entity, DamageSource source, float amount) {
+        if (!(entity instanceof Mob mob)) return true;
+        if (!Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_HUNTER))) return true;
+        if (Boolean.TRUE.equals(mob.getAttached(WarbandAttachments.BOUNTY_REVIVED))) return true;
+        if (entity.getHealth() - amount > 0.0f) return true;
+        mob.setAttached(WarbandAttachments.BOUNTY_REVIVED, true);
+        mob.setHealth(mob.getMaxHealth() * 0.5f);
+        mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.REGENERATION, 20 * 6, 1, false, true));
+        mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.STRENGTH, 20 * 30, 1, false, true));
+        if (entity.level() instanceof ServerLevel level) {
+            level.playSound(null, mob.getX(), mob.getY(), mob.getZ(),
+                    net.minecraft.sounds.SoundEvents.TOTEM_USE, net.minecraft.sounds.SoundSource.HOSTILE, 1.6f, 0.7f);
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING,
+                    mob.getX(), mob.getY() + 1.0, mob.getZ(), 80, 0.6, 1.0, 0.6, 0.25);
+            if (source.getEntity() instanceof ServerPlayer player) {
+                player.sendSystemMessage(Component.literal("§7\"Not yet. Not like this.\""), true);
+            }
+        }
+        return false;
     }
 
     private static void afterDamage(LivingEntity entity, DamageSource source,
@@ -520,10 +545,34 @@ public final class IllagerGrudgeSystem {
         markGrudgeSpawned(hunter);
         SquadCoordinator.createSquad(level, List.of(hunter), difficulty);
         hunter.setCustomName(Component.literal("Bounty Hunter of the " + reputation.faction().displayName()));
+        hunter.setAttached(WarbandAttachments.BOUNTY_HUNTER, true);
+        buffBountyHunter(hunter);
+        equipBountyHunter(hunter);
         directVengeancePursuit(hunter, player);
-        // Strength on top of the helper's Speed I — bounty hunter bites harder than a patrol member.
+        // Resistance II + Jump Boost II + Strength I — feels like a duel, not a fight.
+        int buffTicks = 20 * 60 * 10;
         hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                net.minecraft.world.effect.MobEffects.STRENGTH, 20 * 60 * 2, 0, false, true));
+                net.minecraft.world.effect.MobEffects.STRENGTH, buffTicks, 0, false, true));
+        hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.JUMP_BOOST, buffTicks, 1, false, true));
+        hunter.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.RESISTANCE, buffTicks, 0, false, true));
+        var selector = ((com.warband.mixin.MobGoalSelectorAccessor) hunter).warband$goalSelector();
+        if (hunter instanceof net.minecraft.world.entity.PathfinderMob path) {
+            selector.addGoal(1, new com.warband.ai.goal.BountyMeleeGoal(path));
+        }
+        selector.addGoal(2, new com.warband.ai.goal.BountyClimbGoal(hunter));
+        selector.addGoal(3, new com.warband.ai.goal.BountyChaseGoal(hunter, 1.2));
+        selector.addGoal(4, new com.warband.ai.goal.BountyMarkGoal(hunter));
+        selector.addGoal(4, new com.warband.ai.goal.BountyStalkGoal(hunter));
+        selector.addGoal(5, new com.warband.ai.goal.BountyTauntGoal(hunter));
+
+        // The player should hear him from the start — ominous summon at their feet, not
+        // 30 blocks away at the spawn site.
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                net.minecraft.sounds.SoundEvents.EVOKER_PREPARE_SUMMON, net.minecraft.sounds.SoundSource.HOSTILE, 0.9f, 0.55f);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                net.minecraft.sounds.SoundEvents.RAID_HORN.value(), net.minecraft.sounds.SoundSource.HOSTILE, 0.6f, 0.55f);
         TacticalEffects.arrivalCue(level, origin.getCenter(), TacticalEffects.ArrivalCue.BOUNTY);
         player.sendSystemMessage(Component.literal("A bounty hunter from the " + reputation.faction().displayName() + " has your trail."), true);
         WarbandCriteria.fire(player, WarbandCriteria.BOUNTY_SUMMONED);
@@ -611,6 +660,64 @@ public final class IllagerGrudgeSystem {
     private static boolean isNotable(Mob mob) {
         MobData data = MobData.get(mob);
         return data.role() == Role.LEADER || data.difficulty() >= 0.65f;
+    }
+
+    /** Full diamond kit, enchanted, very rare drops — looks the part of a legendary hunter. */
+    private static void equipBountyHunter(Mob hunter) {
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.item.Items.DIAMOND_HELMET, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 4);
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.item.Items.DIAMOND_CHESTPLATE, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 4);
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.item.Items.DIAMOND_LEGGINGS, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 3);
+        equipDiamond(hunter, net.minecraft.world.entity.EquipmentSlot.FEET, net.minecraft.world.item.Items.DIAMOND_BOOTS, net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 3);
+
+        // Crossbow stays in main hand for ranged engagement; offhand carries the sword
+        // for melee swings driven by BountyMeleeGoal.
+        net.minecraft.world.item.ItemStack crossbow = enchantStack(hunter,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CROSSBOW),
+                net.minecraft.world.item.enchantment.Enchantments.QUICK_CHARGE, 3);
+        enchantStack(hunter, crossbow, net.minecraft.world.item.enchantment.Enchantments.PIERCING, 4);
+        hunter.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, crossbow);
+        hunter.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.01f);
+
+        net.minecraft.world.item.ItemStack sword = enchantStack(hunter,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_SWORD),
+                net.minecraft.world.item.enchantment.Enchantments.SHARPNESS, 4);
+        enchantStack(hunter, sword, net.minecraft.world.item.enchantment.Enchantments.UNBREAKING, 3);
+        // Offhand normally carries the faction banner — only fill if banner is disabled.
+        if (hunter.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND).isEmpty()) {
+            hunter.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND, sword);
+            hunter.setDropChance(net.minecraft.world.entity.EquipmentSlot.OFFHAND, 0.01f);
+        }
+    }
+
+    private static void equipDiamond(Mob hunter, net.minecraft.world.entity.EquipmentSlot slot,
+                                     net.minecraft.world.item.Item item,
+                                     net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> ench, int lvl) {
+        net.minecraft.world.item.ItemStack stack = enchantStack(hunter, new net.minecraft.world.item.ItemStack(item), ench, lvl);
+        enchantStack(hunter, stack, net.minecraft.world.item.enchantment.Enchantments.UNBREAKING, 3);
+        hunter.setItemSlot(slot, stack);
+        hunter.setDropChance(slot, 0.01f);
+    }
+
+    private static net.minecraft.world.item.ItemStack enchantStack(Mob hunter, net.minecraft.world.item.ItemStack stack,
+                                                                   net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> key,
+                                                                   int level) {
+        net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment> ench = hunter.level().registryAccess()
+                .lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(key);
+        stack.enchant(ench, level);
+        return stack;
+    }
+
+    /** Apex-tier stats: real fight, but not a damage sponge. Diamond armor + revive carry the durability. */
+    private static void buffBountyHunter(Mob hunter) {
+        com.warband.spawn.SpawnDirector.addFlat(hunter, net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH,
+                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_health"), 26.0);
+        com.warband.spawn.SpawnDirector.addFlat(hunter, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE,
+                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_damage"), 6.0);
+        com.warband.spawn.SpawnDirector.addFlat(hunter, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE,
+                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_kb"), 0.5);
+        com.warband.spawn.SpawnDirector.addMultiplied(hunter, net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED,
+                com.warband.spawn.SpawnDirector.warbandModifierId("bounty_speed"), 0.15);
+        hunter.setHealth(hunter.getMaxHealth());
     }
 
     /** Make a vengeance-spawned mob actively pursue the player — patrol target + nav kick + Speed buff. */

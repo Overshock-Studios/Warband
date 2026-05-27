@@ -268,12 +268,16 @@ public final class SpawnDirector {
         IllagerIdentity.assignIfNeeded(mob, Role.NONE, difficulty);
     }
 
-    private static void addMultiplied(Mob mob, Holder<Attribute> attribute, Identifier id, double amount) {
+    public static void addMultiplied(Mob mob, Holder<Attribute> attribute, Identifier id, double amount) {
         addModifier(mob, attribute, id, amount, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
     }
 
-    private static void addFlat(Mob mob, Holder<Attribute> attribute, Identifier id, double amount) {
+    public static void addFlat(Mob mob, Holder<Attribute> attribute, Identifier id, double amount) {
         addModifier(mob, attribute, id, amount, AttributeModifier.Operation.ADD_VALUE);
+    }
+
+    public static Identifier warbandModifierId(String path) {
+        return modifierId(path);
     }
 
     private static void addModifier(Mob mob, Holder<Attribute> attribute, Identifier id,

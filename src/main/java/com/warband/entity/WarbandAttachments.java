@@ -69,6 +69,18 @@ public final class WarbandAttachments {
             builder -> builder.persistent(Codec.BOOL)
     );
 
+    /** Per-mob marker: this is a bounty hunter (separate from generic grudge spawns). Drives revive + scary AI. */
+    public static final AttachmentType<Boolean> BOUNTY_HUNTER = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "bounty_hunter"),
+            builder -> builder.persistent(Codec.BOOL)
+    );
+
+    /** Per-mob marker: bounty hunter has used its one-shot revive. */
+    public static final AttachmentType<Boolean> BOUNTY_REVIVED = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "bounty_revived"),
+            builder -> builder.persistent(Codec.BOOL)
+    );
+
     /** Per-mob marker: this illager is a mansion's Warmarshal. Killing it breaks the faction. */
     public static final AttachmentType<Boolean> WARMARSHAL = AttachmentRegistry.create(
             Identifier.fromNamespaceAndPath(WarbandMod.MOD_ID, "warmarshal"),
