@@ -16,6 +16,8 @@
 - Added spider leap-strike: when a spider is meaningfully above its target within 10 blocks, it releases and arcs down at them with a visible web-string trail.
 - Added visible web-string particles to spider web throws and leap-strikes (filled in the previously empty `webTrail` effect with `WHITE_ASH` along the arc).
 - Added spawner difficulty floor: mob spawners, trial spawners, and summoned mobs are now stamped at no less than `spawnerDifficultyFloor` (default 0.45), so dungeon and trial rooms remain meaningful encounters even at world spawn. Configurable; set to 0 to restore vanilla behavior.
+- Added ceiling-crawl drop attack: when a ceiling-crawling spider has the target directly below with at least 2 blocks of clearance, it hovers for ~0.6s (visible tell) then releases with a web-string trail, instead of just crawling in circles.
+- Added Stormie's Spiders soft compat: when the mod is detected, Warband's `CeilingCrawlGoal` is skipped so Stormie's realistic climbing owns that domain. Web throws, sticky paths, and leap-strikes still apply on top.
 - Changed squad backup calls to broadcast distress: when a squad calls for backup, idle nearby squads are alerted to investigate, so fights pull in neighbors instead of staying isolated.
 - Fixed stale javadocs and config comments referring to nonexistent SCORE/TIME difficulty modes; the per-player score is the input to REGIONAL, not a mode of its own.
 
