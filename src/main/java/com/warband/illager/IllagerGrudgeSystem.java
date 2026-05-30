@@ -139,18 +139,24 @@ public final class IllagerGrudgeSystem {
                 && !warmarshalSlain
                 && !isBrokenSeatMob(mob)) {
             IllagerFaction faction = IllagerFactionSystem.factionOrDefault(mob);
+            ServerLevel serverLevel = (ServerLevel) mob.level();
+            IllagerFaction territoryOwner = IllagerTerritory.factionAt(serverLevel, mob.blockPosition());
             long now = mob.level().getGameTime();
             if (inFactionSeat(mob)) {
                 // Assaulting a faction's seat raises its heat (→ a bounty hunter)
                 // rather than mustering revenge patrols back into the ruin.
-                for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
-                    addReputation(participant, faction, MANSION_HEAT_PER_KILL, now + BOUNTY_RETRY_TICKS);
+                for (ServerPlayer participant : participantsNear(serverLevel, mob, player)) {
+                    addReputation(participant, faction,
+                            applyTerritoryMultiplier(MANSION_HEAT_PER_KILL, faction, territoryOwner),
+                            now + BOUNTY_RETRY_TICKS);
                 }
             } else {
-                for (ServerPlayer participant : participantsNear((ServerLevel) mob.level(), mob, player)) {
+                for (ServerPlayer participant : participantsNear(serverLevel, mob, player)) {
                     // Every factioned kill nudges heat — slow drip so /warband intel
                     // shows the faction is "watching" even before a notable grudge forms.
-                    addReputation(participant, faction, FIELD_HEAT_PER_KILL, now + BOUNTY_RETRY_TICKS);
+                    addReputation(participant, faction,
+                            applyTerritoryMultiplier(FIELD_HEAT_PER_KILL, faction, territoryOwner),
+                            now + BOUNTY_RETRY_TICKS);
                     boolean firstKill = !Boolean.TRUE.equals(participant.getAttached(WarbandAttachments.FIRST_KILL_GRACE_USED));
                     recordWitnesses((ServerLevel) mob.level(), mob, participant, true, firstKill);
                     if (firstKill) {
@@ -283,9 +289,33 @@ public final class IllagerGrudgeSystem {
         long now = server.overworld().getGameTime();
         confirmSurvivors(server, now);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            decayReputation(player);
             maybeLaunchRevenge(player, now);
             maybeLaunchBountyHunter(player, now);
             maybeLaunchVengeance(player, now);
+        }
+    }
+
+    /**
+     * Per-tick-scan passive heat decay so a player who stays out of a faction's
+     * affairs cools off over real time. Roughly 1 heat per 30s of online time
+     * per faction — slow enough that an active conflict still bombards, fast
+     * enough that "I'll just lay low" is a viable escape.
+     */
+    private static void decayReputation(ServerPlayer player) {
+        List<FactionReputation> reputations = reputations(player);
+        if (reputations.isEmpty()) return;
+        List<FactionReputation> updated = new ArrayList<>(reputations.size());
+        boolean changed = false;
+        for (FactionReputation r : reputations) {
+            if (r.heat() <= 0) { updated.add(r); continue; }
+            int newHeat = Math.max(0, r.heat() - 1);
+            if (newHeat != r.heat()) changed = true;
+            updated.add(new FactionReputation(r.faction(), newHeat,
+                    r.bountyReadyAt(), r.warReadyAt(), r.crusadeReadyAt()));
+        }
+        if (changed) {
+            player.setAttached(WarbandAttachments.ILLAGER_REPUTATION, List.copyOf(updated));
         }
     }
 
@@ -366,6 +396,14 @@ public final class IllagerGrudgeSystem {
 
     public static boolean debugSpawnBountyHunter(ServerPlayer player, double difficulty) {
         IllagerFaction faction = IllagerFaction.pick(player.getUUID().hashCode() ^ player.getBlockX() ^ player.getBlockZ());
+        return spawnBountyHunterFor(player, faction, difficulty);
+    }
+
+    /**
+     * Spawn a faction bounty hunter against this player. Public entry point for
+     * non-grudge contexts (e.g. high-ominous raid finale).
+     */
+    public static boolean spawnBountyHunterFor(ServerPlayer player, IllagerFaction faction, double difficulty) {
         FactionReputation reputation = new FactionReputation(faction,
                 Math.max(BOUNTY_HEAT_THRESHOLD, (int) Math.round(difficulty * 200)), 0L, 0L, 0L);
         return spawnBountyHunter(player, reputation);
@@ -827,19 +865,52 @@ public final class IllagerGrudgeSystem {
         return personalName + " the Returned";
     }
 
+    /**
+     * Territory-aware heat scaling: killing a faction member inside their own
+     * faction's territory is a deeper offense (1.5×); killing them inside their
+     * rival's territory hits less (0.75×) — the locals appreciate it.
+     */
+    private static int applyTerritoryMultiplier(int heat, IllagerFaction victimFaction, IllagerFaction territoryOwner) {
+        if (territoryOwner == null) return heat;
+        if (territoryOwner == victimFaction) return Math.max(1, (int) Math.round(heat * 1.5));
+        if (territoryOwner == victimFaction.rival()) return Math.max(1, (int) Math.round(heat * 0.75));
+        return heat;
+    }
+
     private static void addReputation(ServerPlayer player, IllagerFaction faction, int heat, long bountyReadyAt) {
         // Heat is also the display value for /warband intel — track it regardless
         // of whether bounty hunters are enabled; only the hunter spawn is gated.
         List<FactionReputation> reputations = new ArrayList<>(reputations(player));
+        boolean updated = false;
         for (int i = 0; i < reputations.size(); i++) {
             FactionReputation reputation = reputations.get(i);
             if (reputation.faction() == faction) {
                 reputations.set(i, reputation.addHeat(heat, bountyReadyAt));
-                player.setAttached(WarbandAttachments.ILLAGER_REPUTATION, trimReputation(reputations));
-                return;
+                updated = true;
+                break;
             }
         }
-        reputations.add(new FactionReputation(faction, heat, bountyReadyAt));
+        if (!updated) {
+            reputations.add(new FactionReputation(faction, heat, bountyReadyAt));
+        }
+
+        // Rival cooldown: killing faction X's members helps X's rival, so the
+        // rival's heat with this player drops. Iron Choir is self-rival and
+        // never benefits anyone.
+        IllagerFaction rival = faction.rival();
+        if (rival != faction && heat > 0) {
+            int reduction = Math.max(1, heat / 2);
+            for (int i = 0; i < reputations.size(); i++) {
+                FactionReputation r = reputations.get(i);
+                if (r.faction() == rival) {
+                    int newHeat = Math.max(0, r.heat() - reduction);
+                    reputations.set(i, new FactionReputation(rival, newHeat,
+                            r.bountyReadyAt(), r.warReadyAt(), r.crusadeReadyAt()));
+                    break;
+                }
+            }
+        }
+
         player.setAttached(WarbandAttachments.ILLAGER_REPUTATION, trimReputation(reputations));
     }
 

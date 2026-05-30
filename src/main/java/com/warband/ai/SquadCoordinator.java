@@ -401,8 +401,10 @@ public final class SquadCoordinator {
 
             // Simple-family mobs (basic zombies, spiders, slimes, hoglins) follow
             // the squad target and regroup, but skip the more nuanced kite/flank
-            // behaviors, those belong to smarter mobs.
-            if (!simple) {
+            // behaviors, those belong to smarter mobs. Also skip when the mob is
+            // riding something (skeleton on spider, baby zombie on chicken): the
+            // rider's kite/breakLos would steer the mount away from the player.
+            if (!simple && !mob.isPassenger()) {
                 if (role == Role.SKIRMISHER || role == Role.MARKSMAN || role == Role.SUPPORT) {
                     accessor.warband$goalSelector().addGoal(2, new KiteGoal(mob, squad));
                     accessor.warband$goalSelector().addGoal(3, new BreakLosGoal(mob, squad));
@@ -505,6 +507,12 @@ public final class SquadCoordinator {
         // dusk/night so they engage from elevation when a player wanders in.
         if (mob instanceof AbstractSkeleton) {
             accessor.warband$goalSelector().addGoal(8, new SkeletonPerchGoal(mob));
+        }
+        // Natural jockey acquisition: smart-enough mobs mount a suitable wild
+        // animal when out of combat (skeleton+spider, baby zombie+chicken).
+        if (com.warband.ai.goal.MountJockeyGoal.isEligibleRider(mob)) {
+            accessor.warband$goalSelector().addGoal(7, new com.warband.ai.goal.MountJockeyGoal(
+                    mob, com.warband.ai.goal.MountJockeyGoal.mountTypeFor(mob)));
         }
         mob.setAttached(WarbandAttachments.WARBAND_GOALS_BOUND, true);
     }

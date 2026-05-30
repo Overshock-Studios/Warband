@@ -22,29 +22,18 @@ public final class CreeperStalkGoal extends SquadGoal {
 
     @Override
     public boolean canUse() {
-        if (!cooldownReady()) return false;
         LivingEntity target = visibleTarget();
-        Vec3 focus;
-        if (target != null) {
-            double distance = mob.distanceToSqr(target);
-            if (distance < 5.0 * 5.0 || distance > 18.0 * 18.0) return false;
-            focus = target.position();
-        } else {
-            // Pre-stage: hold a flanking position near the squad's last-known
-            // contact, so the creeper is already in position when the target
-            // returns instead of starting the approach from scratch.
-            BlockPos lastKnown = squad.lastKnownPos();
-            if (lastKnown == null) return false;
-            if (mob.distanceToSqr(lastKnown.getCenter()) > 24.0 * 24.0) return false;
-            focus = lastKnown.getCenter();
-        }
+        if (target == null || !cooldownReady()) return false;
 
-        Vec3 toMob = mob.position().subtract(focus).normalize();
+        double distance = mob.distanceToSqr(target);
+        if (distance < 5.0 * 5.0 || distance > 18.0 * 18.0) return false;
+
+        Vec3 toMob = mob.position().subtract(target.position()).normalize();
         Vec3 side = new Vec3(-toMob.z, 0.0, toMob.x);
         if (mob.getRandom().nextBoolean()) {
             side = side.scale(-1.0);
         }
-        Vec3 dest = focus.add(side.scale(4.0)).add(toMob.scale(3.0));
+        Vec3 dest = target.position().add(side.scale(4.0)).add(toMob.scale(3.0));
         stalkPos = BlockPos.containing(dest.x, dest.y, dest.z);
         return true;
     }

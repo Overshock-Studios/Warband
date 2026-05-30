@@ -17,7 +17,7 @@ import java.util.EnumSet;
 public final class SpiderWebGoal extends SquadGoal {
 
     private static final int WINDUP_TICKS = 14;
-    private static final int COOLDOWN_TICKS = 100;
+    private static final int COOLDOWN_TICKS = 60;
 
     private BlockPos webPos;
     private int fireAtTick;
@@ -33,18 +33,9 @@ public final class SpiderWebGoal extends SquadGoal {
         if (target == null) return false;
         if (!cooldownReady()) return false;
         double distance = mob.distanceToSqr(target);
-        if (distance < 2.0 * 2.0 || distance > 12.0 * 12.0) return false;
+        if (distance < 1.0 * 1.0 || distance > 10.0 * 10.0) return false;
 
-        // Pre-web a tile between us and the target if they're approaching,
-        // so the trap is placed where their path will hit it. Falls back to
-        // the target's current tile when close.
-        if (distance > 6.0 * 6.0) {
-            Vec3 toTarget = target.position().subtract(mob.position()).normalize().scale(2.5);
-            Vec3 dest = mob.position().add(toTarget);
-            webPos = BlockPos.containing(dest.x, target.getY(), dest.z);
-        } else {
-            webPos = target.blockPosition();
-        }
+        webPos = target.blockPosition();
         return mob.level().getBlockState(webPos).isAir();
     }
 

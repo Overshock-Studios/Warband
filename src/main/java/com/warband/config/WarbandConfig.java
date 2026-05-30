@@ -112,6 +112,16 @@ public final class WarbandConfig {
     public static boolean endermanProvokeEnabled = true;
     /** Minimum difficulty for mobs spawned by mob spawners, trial spawners, and summons. Encounter setpieces shouldn't be trivial. */
     public static double spawnerDifficultyFloor = 0.45;
+    /** Smart skeletons and baby zombies will opportunistically mount nearby spiders/chickens out of combat. */
+    public static boolean naturalJockeysEnabled = true;
+    /** Difficulty required before a mob is "smart enough" to form a jockey on its own. */
+    public static double naturalJockeyMinDifficulty = 0.35;
+    /** Active raiders pillage every animal in range (leashed, named, tamed, baby — the lot) once no village defenders are left. */
+    public static boolean raidPredationEnabled = true;
+    /** High-ominous raids summon a faction bounty hunter during the final wave to finish the player personally. */
+    public static boolean raidFinaleBountyEnabled = true;
+    /** Medium-or-higher ominous raids can attract a rival faction patrol that attacks the raiders. */
+    public static boolean raidRivalInterceptEnabled = true;
 
     // ── Multiplayer ────────────────────────────────────────────────────────
     public static boolean multiplayerFeaturesEnabled = true;
@@ -223,6 +233,11 @@ public final class WarbandConfig {
         seekShelterEnabled = parseBoolean(props, "seekShelterEnabled", seekShelterEnabled, logger);
         endermanProvokeEnabled = parseBoolean(props, "endermanProvokeEnabled", endermanProvokeEnabled, logger);
         spawnerDifficultyFloor = parseDouble(props, "spawnerDifficultyFloor", spawnerDifficultyFloor, 0.0, 1.0, logger);
+        naturalJockeysEnabled = parseBoolean(props, "naturalJockeysEnabled", naturalJockeysEnabled, logger);
+        naturalJockeyMinDifficulty = parseDouble(props, "naturalJockeyMinDifficulty", naturalJockeyMinDifficulty, 0.0, 1.0, logger);
+        raidPredationEnabled = parseBoolean(props, "raidPredationEnabled", raidPredationEnabled, logger);
+        raidFinaleBountyEnabled = parseBoolean(props, "raidFinaleBountyEnabled", raidFinaleBountyEnabled, logger);
+        raidRivalInterceptEnabled = parseBoolean(props, "raidRivalInterceptEnabled", raidRivalInterceptEnabled, logger);
 
         multiplayerFeaturesEnabled = parseBoolean(props, "multiplayerFeaturesEnabled", multiplayerFeaturesEnabled, logger);
         multiplayerSmartMobsPerExtraPlayer = parseInt(props, "multiplayerSmartMobsPerExtraPlayer", multiplayerSmartMobsPerExtraPlayer, 0, 128, logger);
@@ -371,6 +386,16 @@ public final class WarbandConfig {
                 endermanProvokeEnabled=%s
                 # Minimum difficulty for spawner/trial-spawner/summoned mobs (0.0-1.0). Encounter setpieces shouldn't be trivial.
                 spawnerDifficultyFloor=%s
+                # If true, smart skeletons mount nearby spiders and baby zombies mount nearby chickens when out of combat.
+                naturalJockeysEnabled=%s
+                # Difficulty required (0.0-1.0) before a mob is smart enough to form a jockey.
+                naturalJockeyMinDifficulty=%s
+                # If true, active raiders pillage every animal in range (including leashed/named/tamed/babies) when no villager or iron golem is left to fight.
+                raidPredationEnabled=%s
+                # If true, the final wave of a high-ominous raid summons a faction bounty hunter to finish the player personally.
+                raidFinaleBountyEnabled=%s
+                # If true, medium-or-higher ominous raids can attract a rival faction patrol that attacks the raiders.
+                raidRivalInterceptEnabled=%s
 
                 # ── Multiplayer ─────────────────────────────────────────────────
                 # If true, enables party-aware budgets, threat targets, shared intel, and death mercy.
@@ -477,6 +502,11 @@ public final class WarbandConfig {
                     seekShelterEnabled,
                     endermanProvokeEnabled,
                     spawnerDifficultyFloor,
+                    naturalJockeysEnabled,
+                    naturalJockeyMinDifficulty,
+                    raidPredationEnabled,
+                    raidFinaleBountyEnabled,
+                    raidRivalInterceptEnabled,
                     multiplayerFeaturesEnabled,
                     multiplayerSmartMobsPerExtraPlayer,
                     multiplayerEncounterBonusPerExtraPlayer,

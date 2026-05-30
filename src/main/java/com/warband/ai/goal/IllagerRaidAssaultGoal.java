@@ -14,6 +14,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.phys.AABB;
@@ -102,11 +103,23 @@ public final class IllagerRaidAssaultGoal extends SquadGoal {
         AABB box = AABB.ofSize(mob.position(), 48.0, 24.0, 48.0);
         List<LivingEntity> candidates = ((ServerLevel) mob.level()).getEntitiesOfClass(LivingEntity.class, box,
                 entity -> entity.isAlive() && (entity instanceof Villager || entity instanceof IronGolem));
-        return candidates.stream()
+        LivingEntity defender = candidates.stream()
                 .min(Comparator.comparingDouble(entity -> {
                     double distance = mob.distanceToSqr(entity);
                     return entity instanceof Villager ? distance : distance + 24.0;
                 }))
+                .orElse(null);
+        if (defender != null) return defender;
+
+        // Raid predation: with no village defenders left, raiders pillage every
+        // animal they can reach — leashed pets, named pigs, tamed wolves, the
+        // lot. The raid is the setpiece, the destruction is the point.
+        if (!WarbandConfig.raidPredationEnabled) return current;
+        List<Animal> prey = ((ServerLevel) mob.level()).getEntitiesOfClass(Animal.class, box,
+                a -> a.isAlive());
+        return prey.stream()
+                .min(Comparator.comparingDouble(mob::distanceToSqr))
+                .map(a -> (LivingEntity) a)
                 .orElse(current);
     }
 }

@@ -51,11 +51,13 @@ public final class WarbandMod implements ModInitializer {
         MultiplayerDirector.register();
         FriendlyFireHandler.register();
         EndermanProvokeHandler.register();
+        com.warband.ai.VexBondHandler.register();
         GoatHornCommand.register();
         SquadCoordinator.register();
         GolemDirector.register();
         IllagerGrudgeSystem.register();
         StrongholdGarrison.register();
+        com.warband.illager.RaidEvolutionHandler.register();
 
         LOGGER.info("[Warband] initialized");
     }

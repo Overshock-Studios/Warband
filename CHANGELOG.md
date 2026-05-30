@@ -2,18 +2,30 @@
 
 ## 1.3.0
 
-- Added proactive AI: skeletons perch on high ground at dusk, creepers pre-stage at last-known contact, spiders pre-web approach paths, idle zombies cluster into hordes.
-- Added spider leap-strike and ceiling-crawl drop attack with visible web-string trails.
+- Added proactive AI: skeletons perch on high ground at dusk, spiders pre-web approach paths, idle zombies cluster into hordes.
+- Added spider leap-strike and ceiling-crawl drop attack.
 - Added bounty hunter ambush hold when closing without line of sight.
-- Added new `spawnerDifficultyFloor` config (default 0.45) so spawner, trial spawner, and summoned mobs are no longer trivial.
-- Added Stormie's Spiders soft compat (skips ceiling crawl when detected).
-- Changed sun-shelter to be predictive — undead path to shade at dawn instead of waiting to burn.
-- Changed witches to throw real splash potions (Strength pre-buff, Regen for wounded).
-- Changed zombie encirclement to distribute around the target by squad index instead of two-flank stacking.
-- Changed retreat to a positive whitelist: only illagers, piglins, and drowned retreat. Other monsters fight to the death.
-- Changed retreat trigger to also pull at 60% HP when no squadmates are nearby.
-- Changed backup calls to broadcast distress to idle nearby squads.
-- Fixed stale docs referring to nonexistent SCORE/TIME difficulty modes.
+- Added natural jockey acquisition: smart skeletons mount nearby spiders, smart baby zombies mount nearby chickens.
+- Added vex bond: vexes die when their summoning evoker dies.
+- Added zombie stacking to reach perched players.
+- Added raid predation: raiders pillage every animal in range once no village defenders remain.
+- Added raid finale bounty hunter on high-ominous raids.
+- Added rival faction interception during raids.
+- Added faction-colored trophy banner drops on Warmarshal and patrol-captain kills.
+- Added passive faction heat decay over time.
+- Added rival-kill heat reduction: killing a faction helps their rival forgive you.
+- Added faction territories: kills inside a faction's territory hit harder; kills in their rival's territory hit softer.
+- Added difficulty floor for spawner, trial spawner, and summoned mobs.
+- Added Stormie's Spiders compatibility.
+- Changed sun-shelter: undead seek shade at dawn predictively instead of waiting to burn.
+- Changed witches to throw real splash potions for buffs.
+- Changed zombie encirclement to surround from all angles instead of stacking on one flank.
+- Changed retreat behavior to apply only to illagers, piglins, and drowned. Other monsters fight to the death.
+- Changed retreat trigger: smart mobs pull back earlier when no allies are nearby.
+- Changed backup calls to alert nearby idle squads.
+- Fixed jockeys steering their mounts away from the player instead of engaging.
+- Fixed spider webs not firing.
+- Fixed sun-shelter not triggering.
 
 ## 1.2.1
 

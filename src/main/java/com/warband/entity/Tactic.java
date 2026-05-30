@@ -103,6 +103,9 @@ public enum Tactic {
         if (subjects.contains(Subject.ZOMBIE_FAMILY) && difficulty >= 0.70) {
             mask |= WATER_COMMIT.bit;
         }
+        if (subjects.contains(Subject.ZOMBIE_FAMILY) && difficulty >= 0.65) {
+            mask |= MOB_STACK_CLIMB.bit;
+        }
         if (subjects.contains(Subject.ZOMBIE_FAMILY) && difficulty >= 0.80) {
             mask |= LEAP_UNREACHABLE.bit;
         }
