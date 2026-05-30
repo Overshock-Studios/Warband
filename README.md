@@ -6,9 +6,9 @@ Warband makes hostile mobs smarter, not spongier. Regions learn from the players
 
 - Tactical mob squads with leaders, bruisers, marksmen, support roles, morale, regrouping, flanking, pressure, and last-known-position searches
 - Regional or distance-based difficulty with depth scaling, dimension pressure, death mercy, and multiplayer presence
-- Mob-family tactics: skeleton smoke screens, spider webs, creeper stalking, zombie surrounds, blaze high-ground pressure, witch support, piglin morale, hoglin stampedes, phantom harassment, and more
+- Mob-family tactics: skeleton smoke screens and dusk perches, spider webs and leap-strikes, creeper stalking, zombie surrounds and stacks, blaze high-ground pressure, witch potion support, piglin morale, hoglin stampedes, phantom harassment, natural jockey acquisition, and more
 - Multiplayer-aware pressure with threat memory, anti-dogpile targeting, local smart-mob budgets, death mercy areas, and limited shared squad intel
-- Illager factions with doctrines, banners, named ranks, mansion/outpost strongholds, Warmarshals, grudges, bounty hunters, and rival interceptions
+- Illager factions with doctrines, banners, named ranks, mansion/outpost strongholds, Warmarshals, faction territories, grudges, heat that decays and shifts with rival kills, bounty hunters, raid finale boss summons, and rival interceptions
 - Boss upgrades, anti-farm behavior, golem support tools, goat horn interactions, debug commands, and a broad `config/warband.properties` tuning surface
 
 ## Full Documentation -> [Wiki](https://github.com/Overshock-Studios/Warband/wiki)
