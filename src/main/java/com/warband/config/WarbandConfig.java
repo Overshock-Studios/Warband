@@ -106,10 +106,12 @@ public final class WarbandConfig {
     private static EnumSet<Tactic> disabledTacticSet = EnumSet.noneOf(Tactic.class);
     /** If true, log each Warband tactic execution for debugging and balance passes. */
     public static boolean debugTacticLogs = false;
-    /** Sun-burning undead seek the nearest shade instead of standing and burning. */
+    /** Sun-sensitive undead path to shade at dawn instead of waiting to burn. */
     public static boolean seekShelterEnabled = true;
     /** Endermen shot by a player teleport next to the shooter and aggro, instead of just dodging. */
     public static boolean endermanProvokeEnabled = true;
+    /** Minimum difficulty for mobs spawned by mob spawners, trial spawners, and summons. Encounter setpieces shouldn't be trivial. */
+    public static double spawnerDifficultyFloor = 0.45;
 
     // ── Multiplayer ────────────────────────────────────────────────────────
     public static boolean multiplayerFeaturesEnabled = true;
@@ -220,6 +222,7 @@ public final class WarbandConfig {
         debugTacticLogs = parseBoolean(props, "debugTacticLogs", debugTacticLogs, logger);
         seekShelterEnabled = parseBoolean(props, "seekShelterEnabled", seekShelterEnabled, logger);
         endermanProvokeEnabled = parseBoolean(props, "endermanProvokeEnabled", endermanProvokeEnabled, logger);
+        spawnerDifficultyFloor = parseDouble(props, "spawnerDifficultyFloor", spawnerDifficultyFloor, 0.0, 1.0, logger);
 
         multiplayerFeaturesEnabled = parseBoolean(props, "multiplayerFeaturesEnabled", multiplayerFeaturesEnabled, logger);
         multiplayerSmartMobsPerExtraPlayer = parseInt(props, "multiplayerSmartMobsPerExtraPlayer", multiplayerSmartMobsPerExtraPlayer, 0, 128, logger);
@@ -362,10 +365,12 @@ public final class WarbandConfig {
                 disabledTactics=%s
                 # If true, logs each Warband tactic execution for debugging.
                 debugTacticLogs=%s
-                # If true, sun-burning undead seek the nearest shade instead of standing and burning.
+                # If true, sun-sensitive undead path to shade at dawn instead of waiting to burn.
                 seekShelterEnabled=%s
                 # If true, endermen shot by a player teleport next to the shooter and aggro.
                 endermanProvokeEnabled=%s
+                # Minimum difficulty for spawner/trial-spawner/summoned mobs (0.0-1.0). Encounter setpieces shouldn't be trivial.
+                spawnerDifficultyFloor=%s
 
                 # ── Multiplayer ─────────────────────────────────────────────────
                 # If true, enables party-aware budgets, threat targets, shared intel, and death mercy.
@@ -471,6 +476,7 @@ public final class WarbandConfig {
                     debugTacticLogs,
                     seekShelterEnabled,
                     endermanProvokeEnabled,
+                    spawnerDifficultyFloor,
                     multiplayerFeaturesEnabled,
                     multiplayerSmartMobsPerExtraPlayer,
                     multiplayerEncounterBonusPerExtraPlayer,

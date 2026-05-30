@@ -17,6 +17,7 @@ import com.warband.ai.goal.InvestigateLastKnownGoal;
 import com.warband.ai.goal.KiteGoal;
 import com.warband.ai.goal.PhantomHarassGoal;
 import com.warband.ai.goal.SeekShelterGoal;
+import com.warband.ai.goal.SkeletonPerchGoal;
 import com.warband.ai.goal.PiglinSocialGoal;
 import com.warband.ai.goal.PressureUnreachableGoal;
 import com.warband.ai.goal.RegroupGoal;
@@ -31,6 +32,7 @@ import com.warband.ai.goal.WaterCommitGoal;
 import com.warband.ai.goal.WarbandGoal;
 import com.warband.ai.goal.WitchSupportGoal;
 import com.warband.ai.goal.ZombieHordeGoal;
+import com.warband.ai.goal.ZombiePackGoal;
 import com.warband.compat.IllagerInvasionCompat;
 import com.warband.compat.RaidCompat;
 import com.warband.config.WarbandConfig;
@@ -64,6 +66,7 @@ import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.monster.spider.CaveSpider;
 import net.minecraft.world.entity.monster.spider.Spider;
@@ -274,6 +277,21 @@ public final class SquadCoordinator {
         squad.add(mob);
     }
 
+    /**
+     * Cue every other active squad within {@link #BACKUP_RADIUS} of {@code near}
+     * to investigate. Lets a squad that is *not* yet engaged drift toward a
+     * neighboring squad's fight instead of each squad fighting in isolation.
+     */
+    public static void broadcastDistress(Squad origin, BlockPos near) {
+        for (Squad other : SQUADS.values()) {
+            if (other == origin || other.isEmpty()) continue;
+            if (other.level() != origin.level()) continue;
+            if (other.target() != null) continue;
+            if (other.center().distanceToSqr(near.getCenter()) > BACKUP_RADIUS * BACKUP_RADIUS) continue;
+            other.alertTo(near);
+        }
+    }
+
     public static boolean callBackup(Squad squad, BlockPos near) {
         int cap = effectiveMaxSquadSize(squad.level(), near);
         if (squad.members().size() >= cap) return false;
@@ -368,7 +386,10 @@ public final class SquadCoordinator {
 
         boolean simple = isSimpleFamily(mob);
         if (role != Role.NONE) {
-            if (!simple && MobData.get(mob).difficulty() >= RETREAT_MIN_DIFFICULTY) {
+            // Retreat is reserved for intelligent humanoid mobs (illagers,
+            // piglins, drowned). Other monsters fight to the death, so a
+            // wounded creeper/blaze/skeleton doesn't break fantasy by fleeing.
+            if (canRetreat(mob) && MobData.get(mob).difficulty() >= RETREAT_MIN_DIFFICULTY) {
                 accessor.warband$goalSelector().addGoal(2, new RetreatWhenLowGoal(mob, squad));
             }
             accessor.warband$goalSelector().addGoal(3, new RegroupGoal(mob, squad));
@@ -421,7 +442,9 @@ public final class SquadCoordinator {
             accessor.warband$goalSelector().addGoal(4, new CreeperStalkGoal(mob, squad));
         }
         if (hasEnabledTactic(data, Tactic.ZOMBIE_HORDE)) {
-            accessor.warband$goalSelector().addGoal(4, new ZombieHordeGoal(mob, squad));
+            // Priority 3 so the encircle preempts vanilla melee approach until
+            // the mob is actually in striking range (canUse gates distance >= 3).
+            accessor.warband$goalSelector().addGoal(3, new ZombieHordeGoal(mob, squad));
         }
         if (hasEnabledTactic(data, Tactic.ENDERMAN_DISRUPT) && mob instanceof EnderMan) {
             accessor.warband$goalSelector().addGoal(3, new EndermanDisruptGoal(mob, squad));
@@ -460,11 +483,22 @@ public final class SquadCoordinator {
                 || hasEnabledTactic(data, Tactic.WARDEN_PRESSURE))) {
             accessor.warband$goalSelector().addGoal(3, new ExtendedMobTacticGoal(mob, squad));
         }
-        // Universal across all stamped undead: when on fire from sunlight, run
-        // for shade. canUse() filters out sun-immune subclasses (husk, wither
-        // skeleton) by checking isOnFire.
+        // Universal across all stamped undead: at dawn, head for shade before
+        // the first burn tick. canUse() filters out sun-immune subclasses
+        // (husk, wither skeleton) via isSunSensitive.
         if (mob instanceof Zombie || mob instanceof AbstractSkeleton) {
             accessor.warband$goalSelector().addGoal(1, new SeekShelterGoal(mob));
+        }
+        // Passive horde-formation: out-of-combat zombies drift toward each
+        // other so wanderers naturally cluster instead of starving solo.
+        // Low priority so it never overrides combat/shelter behaviors.
+        if (mob instanceof Zombie) {
+            accessor.warband$goalSelector().addGoal(8, new ZombiePackGoal(mob));
+        }
+        // Passive perch: out-of-combat skeletons climb to nearby high ground at
+        // dusk/night so they engage from elevation when a player wanders in.
+        if (mob instanceof AbstractSkeleton) {
+            accessor.warband$goalSelector().addGoal(8, new SkeletonPerchGoal(mob));
         }
         mob.setAttached(WarbandAttachments.WARBAND_GOALS_BOUND, true);
     }
@@ -479,6 +513,17 @@ public final class SquadCoordinator {
      * flank, breakLOS, and retreat. Smarter mobs (skeletons, drowned, piglins,
      * illagers, witches, blazes, endermen) get the full kit.
      */
+    /**
+     * Only intelligent humanoid mobs retreat when wounded or outmatched. Other
+     * hostiles (skeletons, creepers, blazes, witches, endermen, phantoms, etc.)
+     * fight to the death — fleeing reads as out-of-character for them.
+     */
+    private static boolean canRetreat(Mob mob) {
+        return mob instanceof Raider
+                || mob instanceof AbstractPiglin
+                || mob instanceof Drowned;
+    }
+
     private static boolean isSimpleFamily(Mob mob) {
         if (mob instanceof Drowned) return false;
         return mob instanceof Zombie

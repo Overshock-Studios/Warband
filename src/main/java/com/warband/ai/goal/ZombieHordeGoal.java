@@ -9,10 +9,15 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
-/** Zombie-family mobs try to surround rather than duel in a straight line. */
+/**
+ * Zombie-family mobs surround a target by distributing themselves around it
+ * by squad index, so members approach from all sides instead of stacking on
+ * one flank or beelining in single file.
+ */
 public final class ZombieHordeGoal extends SquadGoal {
 
     private static final int COOLDOWN_TICKS = 45;
+    private static final double ENCIRCLE_RADIUS = 4.0;
 
     private BlockPos surroundPos;
 
@@ -28,12 +33,13 @@ public final class ZombieHordeGoal extends SquadGoal {
         double distance = mob.distanceToSqr(target);
         if (distance < 3.0 * 3.0 || distance > 16.0 * 16.0) return false;
 
-        Vec3 toMob = mob.position().subtract(target.position()).normalize();
-        Vec3 side = new Vec3(-toMob.z, 0.0, toMob.x);
-        if ((mob.getId() & 1) == 0) {
-            side = side.scale(-1.0);
-        }
-        Vec3 dest = target.position().add(side.scale(3.5)).add(toMob.scale(2.0));
+        int index = squad.members().indexOf(mob);
+        int total = Math.max(squad.members().size(), 1);
+        if (index < 0) index = (int) (mob.getId() & 0x7fffffff) % total;
+        double angle = (index * (Math.PI * 2.0)) / total;
+
+        Vec3 offset = new Vec3(Math.cos(angle) * ENCIRCLE_RADIUS, 0.0, Math.sin(angle) * ENCIRCLE_RADIUS);
+        Vec3 dest = target.position().add(offset);
         surroundPos = BlockPos.containing(dest.x, dest.y, dest.z);
         return true;
     }
@@ -41,7 +47,7 @@ public final class ZombieHordeGoal extends SquadGoal {
     @Override
     public void start() {
         resetCooldown(COOLDOWN_TICKS);
-        if (surroundPos != null && moveTo(surroundPos) && squad.members().size() > 2) {
+        if (surroundPos != null && moveTo(surroundPos) && squad.members().size() > 1) {
             logTactic(Tactic.ZOMBIE_HORDE);
             TacticalEffects.search((ServerLevel) mob.level(), mob.position());
         }

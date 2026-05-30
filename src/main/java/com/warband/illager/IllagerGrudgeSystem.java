@@ -600,6 +600,9 @@ public final class IllagerGrudgeSystem {
         }
         selector.addGoal(2, new com.warband.ai.goal.BountyClimbGoal(hunter));
         selector.addGoal(2, new com.warband.ai.goal.BountyWindChargeGoal(hunter));
+        // Priority 2: ambush preempts chase so a hunter that has closed without
+        // LOS lies in wait instead of running through.
+        selector.addGoal(2, new com.warband.ai.goal.BountyAmbushGoal(hunter));
         selector.addGoal(3, new com.warband.ai.goal.BountyChaseGoal(hunter, 1.05));
         selector.addGoal(4, new com.warband.ai.goal.BountyMarkGoal(hunter));
         selector.addGoal(4, new com.warband.ai.goal.BountyStalkGoal(hunter));

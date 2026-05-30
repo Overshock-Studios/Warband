@@ -9,9 +9,10 @@ import net.minecraft.world.level.Level;
 import java.util.EnumSet;
 
 /**
- * Sun-burning undead path to the nearest shaded tile instead of standing and
- * dying. Throttled scan, only runs while the mob is actually on fire and
- * exposed to sky.
+ * Sun-sensitive undead path to the nearest shaded tile at dawn instead of
+ * standing in the open until they catch fire. Predictive: triggers on
+ * daytime + sky exposure, not on {@code isOnFire}, so mobs start moving
+ * before the first burn tick.
  */
 public final class SeekShelterGoal extends Goal implements WarbandGoal {
 
@@ -30,9 +31,11 @@ public final class SeekShelterGoal extends Goal implements WarbandGoal {
     @Override
     public boolean canUse() {
         if (!WarbandConfig.seekShelterEnabled) return false;
-        if (!mob.isOnFire()) return false;
+        if (!mob.isSunSensitive()) return false;
+        if (mob.isInWaterRainOrBubble()) return false;
+        if (!mob.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) return false;
         Level level = mob.level();
-        if (!level.isBrightOutside()) return false;
+        if (!level.isDay()) return false;
         if (!level.canSeeSky(mob.blockPosition())) return false;
         if (--recheckCounter > 0) return shelter != null;
         recheckCounter = RECHECK_TICKS;
@@ -42,7 +45,8 @@ public final class SeekShelterGoal extends Goal implements WarbandGoal {
 
     @Override
     public boolean canContinueToUse() {
-        if (shelter == null || !mob.isOnFire()) return false;
+        if (shelter == null) return false;
+        if (mob.isInWaterRainOrBubble()) return false;
         if (mob.blockPosition().distSqr(shelter) <= 4) return false;
         return !mob.getNavigation().isDone();
     }

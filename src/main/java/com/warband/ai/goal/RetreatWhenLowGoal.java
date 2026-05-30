@@ -34,8 +34,13 @@ public final class RetreatWhenLowGoal extends SquadGoal {
     public boolean canUse() {
         if (RaidCompat.isActiveRaider(mob)) return false;
 
-        boolean wounded = mob.getHealth() / mob.getMaxHealth() <= 0.35f;
-        if (!wounded && !squad.isRouting()) {
+        float ratio = mob.getHealth() / mob.getMaxHealth();
+        boolean wounded = ratio <= 0.35f;
+        // Pre-emptive pull: at 60% HP, if no allies are in support range, the
+        // mob reads the fight as unwinnable solo and tries to regroup instead
+        // of dying alone. Squad-aware caution, not panic.
+        boolean outmatched = !wounded && ratio <= 0.60f && !hasSupportNearby();
+        if (!wounded && !outmatched && !squad.isRouting()) {
             retreatingSince = -1;
             return false;
         }
@@ -66,5 +71,13 @@ public final class RetreatWhenLowGoal extends SquadGoal {
         if (retreat != null) {
             moveTo(retreat);
         }
+    }
+
+    private boolean hasSupportNearby() {
+        for (Mob ally : squad.members()) {
+            if (ally == mob || !ally.isAlive()) continue;
+            if (mob.distanceToSqr(ally) < 10.0 * 10.0) return true;
+        }
+        return false;
     }
 }

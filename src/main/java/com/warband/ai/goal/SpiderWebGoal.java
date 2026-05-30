@@ -31,11 +31,20 @@ public final class SpiderWebGoal extends SquadGoal {
     public boolean canUse() {
         LivingEntity target = visibleTarget();
         if (target == null) return false;
-        double distance = mob.distanceToSqr(target);
-        if (distance < 2.0 * 2.0 || distance > 8.0 * 8.0) return false;
         if (!cooldownReady()) return false;
+        double distance = mob.distanceToSqr(target);
+        if (distance < 2.0 * 2.0 || distance > 12.0 * 12.0) return false;
 
-        webPos = target.blockPosition();
+        // Pre-web a tile between us and the target if they're approaching,
+        // so the trap is placed where their path will hit it. Falls back to
+        // the target's current tile when close.
+        if (distance > 6.0 * 6.0) {
+            Vec3 toTarget = target.position().subtract(mob.position()).normalize().scale(2.5);
+            Vec3 dest = mob.position().add(toTarget);
+            webPos = BlockPos.containing(dest.x, target.getY(), dest.z);
+        } else {
+            webPos = target.blockPosition();
+        }
         return mob.level().getBlockState(webPos).isAir();
     }
 

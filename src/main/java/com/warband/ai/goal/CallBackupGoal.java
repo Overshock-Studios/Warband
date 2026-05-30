@@ -28,5 +28,8 @@ public final class CallBackupGoal extends SquadGoal {
             TacticalEffects.signal((ServerLevel) mob.level(), mob);
             squad.markBackupCalled();
         }
+        // Also wave in idle neighboring squads, so a fight isn't fought alone
+        // even when no fresh recruit was available.
+        SquadCoordinator.broadcastDistress(squad, mob.blockPosition());
     }
 }

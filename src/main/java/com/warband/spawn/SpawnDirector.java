@@ -56,7 +56,10 @@ public final class SpawnDirector {
             EntitySpawnReason.PATROL,
             EntitySpawnReason.REINFORCEMENT,
             EntitySpawnReason.JOCKEY,
-            EntitySpawnReason.EVENT);
+            EntitySpawnReason.EVENT,
+            EntitySpawnReason.SPAWNER,
+            EntitySpawnReason.TRIAL_SPAWNER,
+            EntitySpawnReason.MOB_SUMMONED);
 
     private static final Identifier HEALTH_MOD = modifierId("difficulty_health");
     private static final Identifier DAMAGE_MOD = modifierId("difficulty_damage");
@@ -111,6 +114,12 @@ public final class SpawnDirector {
     private static void runStampPipeline(Mob mob, ServerLevel level, EntitySpawnReason reason) {
         if (isDyingOrGone(mob)) return;
         double difficulty = DifficultyManager.getDifficulty(level, mob.blockPosition());
+        // Spawner-spawned mobs (vanilla mob spawners, trial spawners, summons)
+        // are encounter setpieces, not background flora — raise them to the
+        // configured floor so a dungeon room is meaningful even at world spawn.
+        if (EntitySpawnReason.isSpawner(reason) || reason == EntitySpawnReason.MOB_SUMMONED) {
+            difficulty = Math.max(difficulty, WarbandConfig.spawnerDifficultyFloor);
+        }
         if (IllagerInvasionCompat.isIllagerLike(mob)) {
             // Naturally-spawned stronghold illagers (e.g. outpost pillagers) are
             // raised to the garrison floor here; mansion residents are caught on
