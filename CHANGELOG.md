@@ -13,6 +13,9 @@
 - Added passive zombie pack formation: out-of-combat zombies drift toward nearby zombies, naturally clustering into small hordes instead of wandering solo.
 - Added skeleton dusk-perch: out-of-combat skeletons climb nearby high ground at dusk/night so they engage from elevation when a player wanders into range.
 - Added bounty hunter ambush: when a hunter has closed within 12 blocks of the target without line of sight, they hold position and look around for up to 4 seconds instead of sprinting through, creating "they were waiting around the corner" moments.
+- Added spider leap-strike: when a spider is meaningfully above its target within 10 blocks, it releases and arcs down at them with a visible web-string trail.
+- Added visible web-string particles to spider web throws and leap-strikes (filled in the previously empty `webTrail` effect with `WHITE_ASH` along the arc).
+- Added spawner difficulty floor: mob spawners, trial spawners, and summoned mobs are now stamped at no less than `spawnerDifficultyFloor` (default 0.45), so dungeon and trial rooms remain meaningful encounters even at world spawn. Configurable; set to 0 to restore vanilla behavior.
 - Changed squad backup calls to broadcast distress: when a squad calls for backup, idle nearby squads are alerted to investigate, so fights pull in neighbors instead of staying isolated.
 - Fixed stale javadocs and config comments referring to nonexistent SCORE/TIME difficulty modes; the per-player score is the input to REGIONAL, not a mode of its own.
 

@@ -26,6 +26,7 @@ import com.warband.ai.goal.RetreatWhenLowGoal;
 import com.warband.ai.goal.SkeletonSmokeGoal;
 import com.warband.ai.goal.SlimeSurgeGoal;
 import com.warband.ai.goal.SquadTargetGoal;
+import com.warband.ai.goal.SpiderLeapGoal;
 import com.warband.ai.goal.SpiderWebGoal;
 import com.warband.ai.goal.StickyPathGoal;
 import com.warband.ai.goal.WaterCommitGoal;
@@ -415,10 +416,15 @@ public final class SquadCoordinator {
         if (hasEnabledTactic(data, Tactic.SPIDER_WEB)) {
             accessor.warband$goalSelector().addGoal(3, new SpiderWebGoal(mob, squad));
         }
+        if ((mob instanceof Spider || mob instanceof CaveSpider) && hasEnabledTactic(data, Tactic.SPIDER_WEB)) {
+            accessor.warband$goalSelector().addGoal(3, new SpiderLeapGoal(mob, squad));
+        }
         if (hasEnabledTactic(data, Tactic.STICKY_PATH)) {
             accessor.warband$goalSelector().addGoal(7, new StickyPathGoal(mob, squad));
         }
-        if (hasEnabledTactic(data, Tactic.CEILING_CRAWL)) {
+        // Stormie's Spiders owns realistic climb/ceiling pathing. Defer to it
+        // when present so the two systems don't fight over the same flags.
+        if (hasEnabledTactic(data, Tactic.CEILING_CRAWL) && !com.warband.compat.StormieSpidersCompat.isLoaded()) {
             accessor.warband$goalSelector().addGoal(4, new CeilingCrawlGoal(mob, squad));
         }
         if (hasEnabledTactic(data, Tactic.FROST_WALKER)) {

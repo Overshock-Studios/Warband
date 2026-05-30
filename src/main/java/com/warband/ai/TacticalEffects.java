@@ -20,6 +20,16 @@ public final class TacticalEffects {
     }
 
     public static void webTrail(ServerLevel level, Vec3 from, Vec3 to) {
+        Vec3 delta = to.subtract(from);
+        double length = delta.length();
+        if (length < 0.1) return;
+        int steps = Math.max(3, (int) Math.ceil(length * 2.5));
+        for (int i = 1; i <= steps; i++) {
+            double t = i / (double) steps;
+            Vec3 p = from.add(delta.scale(t));
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.WHITE_ASH,
+                    p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
+        }
     }
 
     public static void frost(ServerLevel level, BlockPos pos) {
