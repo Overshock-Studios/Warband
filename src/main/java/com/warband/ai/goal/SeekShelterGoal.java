@@ -4,6 +4,8 @@ import com.warband.config.WarbandConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.monster.skeleton.WitherSkeleton;
+import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.level.Level;
 
 import java.util.EnumSet;
@@ -31,11 +33,11 @@ public final class SeekShelterGoal extends Goal implements WarbandGoal {
     @Override
     public boolean canUse() {
         if (!WarbandConfig.seekShelterEnabled) return false;
-        if (!mob.isSunSensitive()) return false;
-        if (mob.isInWaterRainOrBubble()) return false;
+        if (mob instanceof Husk || mob instanceof WitherSkeleton) return false;
+        if (mob.isInWaterOrRain()) return false;
         if (!mob.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) return false;
         Level level = mob.level();
-        if (!level.isDay()) return false;
+        if (!level.isBrightOutside()) return false;
         if (!level.canSeeSky(mob.blockPosition())) return false;
         if (--recheckCounter > 0) return shelter != null;
         recheckCounter = RECHECK_TICKS;
@@ -46,7 +48,7 @@ public final class SeekShelterGoal extends Goal implements WarbandGoal {
     @Override
     public boolean canContinueToUse() {
         if (shelter == null) return false;
-        if (mob.isInWaterRainOrBubble()) return false;
+        if (mob.isInWaterOrRain()) return false;
         if (mob.blockPosition().distSqr(shelter) <= 4) return false;
         return !mob.getNavigation().isDone();
     }
